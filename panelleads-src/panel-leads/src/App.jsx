@@ -67,17 +67,20 @@ const PART_KEYS = MEDIOS.filter((m) => m.grupo === "part").map((m) => m.key);
 const CORP_KEYS = MEDIOS.filter((m) => m.grupo === "corp").map((m) => m.key);
 
 // ── Meses ────────────────────────────────────────────────────────────
-const MESES = [
-  { key: "2025-01", label: "Ene 2025" }, { key: "2025-02", label: "Feb 2025" },
-  { key: "2025-03", label: "Mar 2025" }, { key: "2025-04", label: "Abr 2025" },
-  { key: "2025-05", label: "May 2025" }, { key: "2025-06", label: "Jun 2025" },
-  { key: "2025-07", label: "Jul 2025" }, { key: "2025-08", label: "Ago 2025" },
-  { key: "2025-09", label: "Sep 2025" }, { key: "2025-10", label: "Oct 2025" },
-  { key: "2025-11", label: "Nov 2025" }, { key: "2025-12", label: "Dic 2025" },
-  { key: "2026-01", label: "Ene 2026" }, { key: "2026-02", label: "Feb 2026" },
-  { key: "2026-03", label: "Mar 2026" }, { key: "2026-04", label: "Abr 2026" },
-  { key: "2026-05", label: "May 2026" }, { key: "2026-06", label: "Jun 2026" },
-];
+function generarMeses() {
+  const LABELS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const hoy = new Date();
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() >= 15 ? 1 : 0), 1);
+  const result = [];
+  let y = 2025, m = 1;
+  while (y < fin.getFullYear() || (y === fin.getFullYear() && m <= fin.getMonth() + 1)) {
+    result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS[m-1]} ${y}` });
+    if (++m > 12) { m = 1; y++; }
+  }
+  return result;
+}
+const MESES = generarMeses();
+const MES_ACTUAL = MESES[MESES.length - 1]?.key ?? "2026-06";
 const nf = new Intl.NumberFormat("es-AR");
 const cf = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const labelDe = (k) => MESES.find((m) => m.key === k)?.label ?? k;
@@ -513,7 +516,7 @@ function TablaEmpresas({ filas, conVendedor, onDelete, onSave }) {
 function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const yoId = sesion.user.id;
   const [vista, setVista] = useState("cargar");
-  const [mesSel, setMesSel] = useState("2026-06");
+  const [mesSel, setMesSel] = useState(MES_ACTUAL);
   const [defMedio, setDefMedio] = useState("");
   const [texto, setTexto] = useState("");
   const [preview, setPreview] = useState([]);
@@ -692,7 +695,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const esAdmin = sesion.perfil.rol === "admin";
   const tip = { background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, fontSize: 12, color: T.ink };
   const [vista, setVista] = useState("tablero");
-  const [mesInv, setMesInv] = useState("2026-05");
+  const [mesInv, setMesInv] = useState(MES_ACTUAL);
   const [montoInv, setMontoInv] = useState("");
   const [avisoInv, setAvisoInv] = useState("");
   const [fMes, setFMes] = useState("todos");
@@ -740,11 +743,12 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
 
   const data = useMemo(() => MESES.map((m) => {
     const r = datos.reporte[m.key] || {};
-    const info = Number(r.info) || 0;
-    const tablet_part = Number(r.tablet_part) || 0;
-    const mail_corpo = Number(r.mail_corpo) || 0;
-    const waalaxy_fml = Number(r.waalaxy_fml) || 0;
-    const tablet_corpo = Number(r.tablet_corpo) || 0;
+    const mesLeads = datos.leads.filter((l) => l.mes === m.key);
+    const info       = mesLeads.filter((l) => l.medio === "infoRenting").length;
+    const tablet_part = mesLeads.filter((l) => l.medio === "particularesDarwin").length;
+    const mail_corpo  = mesLeads.filter((l) => l.medio === "emailsDerivar").length;
+    const waalaxy_fml = mesLeads.filter((l) => l.medio === "waalax").length;
+    const tablet_corpo = mesLeads.filter((l) => l.medio === "empresasDarwin").length;
     const part = info + tablet_part;
     const corp = mail_corpo + waalaxy_fml + tablet_corpo;
     const total = part + corp;
