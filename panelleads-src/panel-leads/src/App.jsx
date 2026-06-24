@@ -568,6 +568,8 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   }
   async function guardarLeadEdit(id, patch) { const { error } = await supabase.from("leads").update(patch).eq("id", id); if (!error) recargar(); }
   async function guardarEmpresaEdit(id, patch) { const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id); if (!error) recargar(); }
+  async function borrarLead(id) { if (!confirm("¿Borrar este lead?")) return; await supabase.from("leads").delete().eq("id", id); recargar(); }
+  async function borrarEmpresa(id) { if (!confirm("¿Borrar esta empresa?")) return; await supabase.from("empresas_activas").delete().eq("id", id); recargar(); }
 
   const previewPart = preview.filter((p) => grupoDe(p.medio) === "part").length;
   const previewCorp = preview.filter((p) => grupoDe(p.medio) === "corp").length;
@@ -660,7 +662,7 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
               <button disabled={busy} onClick={guardarEmpresa} className="mt-4 py-2.5 px-5" style={{ background: T.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Guardar empresa</button>
               {avisoEmp && <span className="mt-2" style={{ color: T.teal, fontSize: 13, fontWeight: 600, marginLeft: 12 }}>{avisoEmp}</span>}
             </Card>
-            <TablaEmpresas filas={misEmpresas} conVendedor={false} onSave={guardarEmpresaEdit} />
+            <TablaEmpresas filas={misEmpresas} conVendedor={false} onSave={guardarEmpresaEdit} onDelete={borrarEmpresa} />
           </div>
         )}
 
@@ -677,7 +679,7 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
             <Card style={{ padding: 14 }}>
               <div style={{ maxWidth: 220 }}><Field label="Filtrar por mes"><Select value={fHmes} onChange={setFHmes} options={[["todos", "Todos los meses"], ...MESES.map((m) => [m.key, m.label])]} /></Field></div>
             </Card>
-            <ListaLeads filas={miHistLista} conVendedor={false} onSave={guardarLeadEdit} />
+            <ListaLeads filas={miHistLista} conVendedor={false} onSave={guardarLeadEdit} onDelete={borrarLead} />
           </div>
         )}
       </div>
@@ -910,7 +912,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
               </table>
             </Card>
 
-            <ListaLeads filas={filtrados} conVendedor={true} onDelete={esAdmin ? borrarLead : null} onSave={esAdmin ? guardarLeadEdit : null} />
+            <ListaLeads filas={filtrados} conVendedor={true} onDelete={borrarLead} onSave={guardarLeadEdit} />
           </div>
         )}
 
@@ -924,7 +926,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
             <Card style={{ padding: 14 }}>
               <div style={{ maxWidth: 220 }}><Field label="Filtrar por vendedor"><Select value={fVend} onChange={setFVend} options={[["todos", "Todos"], ...datos.vendedores.map((v) => [v.id, v.nombre])]} /></Field></div>
             </Card>
-            <TablaEmpresas filas={empFiltradas} conVendedor={true} onDelete={esAdmin ? borrarEmpresa : null} onSave={esAdmin ? guardarEmpresaEdit : null} />
+            <TablaEmpresas filas={empFiltradas} conVendedor={true} onDelete={borrarEmpresa} onSave={guardarEmpresaEdit} />
           </div>
         )}
 
