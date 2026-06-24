@@ -701,6 +701,9 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const [mesInv, setMesInv] = useState(MES_ACTUAL);
   const [montoInv, setMontoInv] = useState("");
   const [avisoInv, setAvisoInv] = useState("");
+  const [reservasInput, setReservasInput] = useState("");
+  const [diasInput, setDiasInput] = useState("");
+  const [avisoRes, setAvisoRes] = useState("");
   const [fMes, setFMes] = useState("todos");
   const [fMed, setFMed] = useState("todos");
   const [fVend, setFVend] = useState("todos");
@@ -726,6 +729,17 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   async function borrarEmpresa(id) {
     if (!confirm("¿Borrar esta empresa?")) return;
     await supabase.from("empresas_activas").delete().eq("id", id); recargar();
+  }
+  async function guardarReservas() {
+    if (!reservasInput && !diasInput) return flash(setAvisoRes, "Ingresá al menos un valor.");
+    setBusy(true);
+    const patch = { mes: mesInv, updated_at: new Date().toISOString() };
+    if (reservasInput) patch.reservas_particulares = Number(reservasInput) || 0;
+    if (diasInput) patch.dias_reserva = Number(diasInput) || 0;
+    const { error } = await supabase.from("reporte_mensual").upsert(patch, { onConflict: "mes" });
+    setBusy(false);
+    if (error) return flash(setAvisoRes, "Error: " + error.message);
+    flash(setAvisoRes, `Actualizado · ${labelDe(mesInv)}`); setReservasInput(""); setDiasInput(""); recargar();
   }
   async function guardarLeadEdit(id, patch) { await supabase.from("leads").update(patch).eq("id", id); recargar(); }
   async function guardarEmpresaEdit(id, patch) { await supabase.from("empresas_activas").update(patch).eq("id", id); recargar(); }
@@ -820,6 +834,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
               <Kpi label="Costo / lead particular" value={cf.format(ult.costoPart)} sub={`${nf.format(ult.part)} leads`} accent={T.blue} />
               <Kpi label="Costo / lead corporativo" value={cf.format(ult.costoCorp)} sub={`${nf.format(ult.corp)} leads`} accent={T.gold} />
               <Kpi label="Cotizaciones" value={nf.format(totalCotizadas)} sub="total cotizadas" accent={T.teal} />
+              {(() => { const r = datos.reporte[ult.key] || {}; const res = Number(r.reservas_particulares) || 0; const dias = Number(r.dias_reserva) || 0; const prom = dias ? (res / dias).toFixed(1) : "—"; return (<><Kpi label="Reservas particulares" value={nf.format(res)} sub={ult.label} accent="#7c3aed" /><Kpi label="Días de reserva" value={nf.format(dias)} sub={ult.label} accent="#db2777" /><Kpi label="Promedio reservas/día" value={prom} sub={dias ? `${nf.format(res)} reservas · ${nf.format(dias)} días` : "Sin datos"} accent="#ea580c" /></>); })()}
             </div>
             <Card className="no-print" style={{ padding: 18 }}>
               <div className="flex flex-wrap items-end gap-3">
@@ -827,6 +842,12 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
                 <div style={{ flex: "1 1 200px" }}><Field label="Inversión del mes (ARS)"><Txt value={montoInv} onChange={setMontoInv} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].inversion) || 0)} /></Field></div>
                 <button disabled={busy} onClick={guardarInversion} className="py-3 px-5" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar inversión</button>
                 {avisoInv && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoInv}</span>}
+              </div>
+              <div className="flex flex-wrap items-end gap-3 mt-3" style={{ borderTop: `1px solid ${T.line}`, paddingTop: 14 }}>
+                <div style={{ flex: "1 1 200px" }}><Field label="Reservas particulares"><Txt value={reservasInput} onChange={setReservasInput} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].reservas_particulares) || 0)} /></Field></div>
+                <div style={{ flex: "1 1 200px" }}><Field label="Días de reserva"><Txt value={diasInput} onChange={setDiasInput} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].dias_reserva) || 0)} /></Field></div>
+                <button disabled={busy} onClick={guardarReservas} className="py-3 px-5" style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar reservas</button>
+                {avisoRes && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoRes}</span>}
               </div>
             </Card>
             <Card style={{ padding: 18 }}>
