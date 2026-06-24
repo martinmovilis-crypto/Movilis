@@ -738,15 +738,19 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
 
   const data = useMemo(() => MESES.map((m) => {
     const r = datos.reporte[m.key] || {};
-    const part = Number(r.leads_part) || 0;
-    const corp = Number(r.leads_corp) || 0;
+    const info = Number(r.info) || 0;
+    const tablet_part = Number(r.tablet_part) || 0;
+    const mail_corpo = Number(r.mail_corpo) || 0;
+    const waalaxy_fml = Number(r.waalaxy_fml) || 0;
+    const tablet_corpo = Number(r.tablet_corpo) || 0;
+    const part = info + tablet_part;
+    const corp = mail_corpo + waalaxy_fml + tablet_corpo;
     const total = part + corp;
     const inv = Number(r.inversion) || 0;
     const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
     return {
       key: m.key, label: m.label,
-      info: Number(r.info) || 0, mail_corpo: Number(r.mail_corpo) || 0, waalaxy_fml: Number(r.waalaxy_fml) || 0,
-      tablet_part: Number(r.tablet_part) || 0, tablet_corpo: Number(r.tablet_corpo) || 0,
+      info, mail_corpo, waalaxy_fml, tablet_part, tablet_corpo,
       part, corp, total, inv, crm: crmTotal,
       costo: total ? Math.round(inv / total) : 0,
       costoPart: part ? Math.round(inv / part) : 0,
@@ -779,7 +783,10 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
           <div className="mt-6 grid gap-4">
             <div className="no-print flex flex-wrap items-center justify-between gap-3">
               <span style={{ fontSize: 13, color: T.muted }}>Reporte de leads · {ult.label}</span>
-              <button onClick={() => window.print()} className="py-2.5 px-4" style={{ background: T.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar PDF</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => exportarExcel({ resumen: conMov, archivo: `reporte-mensual-${ult.key}.xlsx` })} className="py-2.5 px-4" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar Excel</button>
+                <button onClick={() => window.print()} className="py-2.5 px-4" style={{ background: T.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar PDF</button>
+              </div>
             </div>
             <div className="print-only" style={{ marginBottom: 6 }}><div style={{ fontSize: 20, fontWeight: 700 }}>LeadAdmin · Reporte</div><div style={{ fontSize: 12, color: T.muted }}>Generado el {hoy} · período {ult.label}</div></div>
             <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
