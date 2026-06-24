@@ -81,6 +81,9 @@ function generarMeses() {
 }
 const MESES = generarMeses();
 const MES_ACTUAL = MESES[MESES.length - 1]?.key ?? "2026-06";
+// Desde este mes en adelante el tablero cuenta leads reales cargados por los
+// vendedores. Los meses anteriores conservan el histórico viejo (reporte_mensual).
+const CORTE_REAL = (() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; })();
 const nf = new Intl.NumberFormat("es-AR");
 const cf = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const labelDe = (k) => MESES.find((m) => m.key === k)?.label ?? k;
@@ -743,6 +746,23 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
 
   const data = useMemo(() => MESES.map((m) => {
     const r = datos.reporte[m.key] || {};
+    const inv = Number(r.inversion) || 0;
+    // Meses anteriores al corte: se muestra el histórico viejo tal cual estaba
+    // cargado (reporte_mensual). Desde el corte en adelante: leads reales.
+    if (m.key < CORTE_REAL) {
+      const part = Number(r.leads_part) || 0;
+      const corp = Number(r.leads_corp) || 0;
+      const total = part + corp;
+      const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
+      return {
+        key: m.key, label: m.label,
+        info: part, mail_corpo: 0, waalaxy_fml: corp, tablet_part: 0, tablet_corpo: 0,
+        part, corp, total, inv, crm: crmTotal, historico: true,
+        costo: total ? Math.round(inv / total) : 0,
+        costoPart: part ? Math.round(inv / part) : 0,
+        costoCorp: corp ? Math.round(inv / corp) : 0,
+      };
+    }
     const mesLeads = datos.leads.filter((l) => l.mes === m.key);
     const info       = mesLeads.filter((l) => l.medio === "infoRenting").length;
     const tablet_part = mesLeads.filter((l) => l.medio === "particularesDarwin").length;
@@ -752,7 +772,6 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
     const part = info + tablet_part;
     const corp = mail_corpo + waalaxy_fml + tablet_corpo;
     const total = part + corp;
-    const inv = Number(r.inversion) || 0;
     const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
     return {
       key: m.key, label: m.label,
