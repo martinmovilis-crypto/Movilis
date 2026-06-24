@@ -177,8 +177,20 @@ export default function App() {
   const [datos, setDatos] = useState({ leads: [], inversion: {}, crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
 
   useEffect(() => {
-    const t = setTimeout(() => setSplash(false), 3000);
-    return () => clearTimeout(t);
+    let t = setTimeout(() => setSplash(false), 3000);
+    // Reaparece al reabrir la app desde segundo plano (PWA instalada)
+    let oculta = Date.now();
+    const onVis = () => {
+      if (document.visibilityState === "hidden") { oculta = Date.now(); return; }
+      // Si estuvo cerrada/oculta más de 30s, mostramos la portada otra vez
+      if (Date.now() - oculta > 30000) {
+        setSplash(true);
+        clearTimeout(t);
+        t = setTimeout(() => setSplash(false), 3000);
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearTimeout(t); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   useEffect(() => {
