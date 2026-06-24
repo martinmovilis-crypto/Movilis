@@ -1,0 +1,49 @@
+name: Deploy a Netlify
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "panelleads-src/**"
+      - "deploy/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: panelleads-src/panel-leads/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+        working-directory: panelleads-src/panel-leads
+
+      - name: Compilar
+        run: npm run build
+        working-directory: panelleads-src/panel-leads
+
+      - name: Copiar archivos PWA al dist
+        run: |
+          cp public/sw.js dist/
+          cp public/manifest.webmanifest dist/
+          cp public/icon-192.png dist/
+          cp public/icon-512.png dist/
+          cp public/_redirects dist/
+        working-directory: panelleads-src/panel-leads
+
+      - name: Deploy a Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: panelleads-src/panel-leads/dist
+          production-branch: main
+          production-deploy: true
+          deploy-message: "Deploy automático desde GitHub Actions"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: c26d58f7-e069-477e-bc92-ca701e0df96a
