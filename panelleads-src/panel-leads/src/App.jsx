@@ -72,7 +72,7 @@ function generarMeses() {
   const hoy = new Date();
   const fin = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() >= 15 ? 1 : 0), 1);
   const result = [];
-  let y = 2025, m = 1;
+  let y = 2024, m = 1;
   while (y < fin.getFullYear() || (y === fin.getFullYear() && m <= fin.getMonth() + 1)) {
     result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS[m-1]} ${y}` });
     if (++m > 12) { m = 1; y++; }
