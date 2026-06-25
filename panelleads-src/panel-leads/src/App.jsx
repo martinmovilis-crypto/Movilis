@@ -436,8 +436,15 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
   useEffect(() => { setPag((p) => Math.min(p, totalPags - 1)); }, [totalPags]);
   const visibles = filas.slice(pag * tope, pag * tope + tope);
   const ei = { width: "100%", border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, outline: "none" };
-  function abrir(l) { setEditId(l.id); setD({ nombre: l.nombre || "", contacto: l.contacto || "", medio: l.medio, operador: l.operador || "", cotizada: !!l.cotizada, mes: l.mes }); }
-  async function guardar() { await onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: d.mes }); setEditId(null); }
+  const ANIOS = Array.from(new Set(MESES.map((m) => m.key.slice(0, 4)))).sort();
+  const LABELS_MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  function abrir(l) {
+    const [anio, numMes] = (l.mes || "").split("-");
+    setEditId(l.id);
+    setD({ nombre: l.nombre || "", contacto: l.contacto || "", medio: l.medio, operador: l.operador || "", cotizada: !!l.cotizada, anio: anio || "2025", numMes: numMes || "01" });
+  }
+  function mesKey() { return `${d.anio}-${d.numMes}`; }
+  async function guardar() { await onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: mesKey() }); setEditId(null); }
   const acc = onSave || onDelete;
   return (
     <Card style={{ padding: 20, overflowX: "auto" }}>
@@ -446,7 +453,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
         <thead><tr style={{ color: T.muted, textAlign: "left" }}>
           <th className="py-2" style={{ fontWeight: 600 }}>Nombre</th><th className="py-2" style={{ fontWeight: 600 }}>Contacto</th>
           <th className="py-2" style={{ fontWeight: 600 }}>Medio</th><th className="py-2" style={{ fontWeight: 600 }}>Asesor</th><th className="py-2" style={{ fontWeight: 600 }}>Cotizada</th>
-          {conVendedor && <th className="py-2" style={{ fontWeight: 600 }}>Vendedor</th>}<th className="py-2" style={{ fontWeight: 600 }}>Mes</th>
+          {conVendedor && <th className="py-2" style={{ fontWeight: 600 }}>Vendedor</th>}<th className="py-2" style={{ fontWeight: 600 }}>Año</th><th className="py-2" style={{ fontWeight: 600 }}>Mes</th>
           {acc && <th></th>}
         </tr></thead>
         <tbody>{visibles.map((l) => editId === l.id ? (
@@ -457,7 +464,8 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
             <td className="py-2"><input value={d.operador} onChange={(e) => setD({ ...d, operador: e.target.value })} style={ei} placeholder="—" /></td>
             <td className="py-2"><select value={d.cotizada ? "si" : "no"} onChange={(e) => setD({ ...d, cotizada: e.target.value === "si" })} style={ei}><option value="no">No</option><option value="si">Sí</option></select></td>
             {conVendedor && <td className="py-2" style={{ color: T.muted }}>{l.vendedorNombre}</td>}
-            <td className="py-2"><select value={d.mes} onChange={(e) => setD({ ...d, mes: e.target.value })} style={ei}>{MESES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}</select></td>
+            <td className="py-2"><select value={d.anio} onChange={(e) => setD({ ...d, anio: e.target.value })} style={{ ...ei, width: 72 }}>{ANIOS.map((a) => <option key={a} value={a}>{a}</option>)}</select></td>
+            <td className="py-2"><select value={d.numMes} onChange={(e) => setD({ ...d, numMes: e.target.value })} style={{ ...ei, width: 68 }}>{LABELS_MES.map((lb, i) => { const v = String(i+1).padStart(2,"0"); return <option key={v} value={v}>{lb}</option>; })}</select></td>
             <td className="py-2" style={{ whiteSpace: "nowrap" }}>
               <button onClick={guardar} style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>✓</button>
               <button onClick={() => setEditId(null)} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", fontSize: 14, marginLeft: 4 }}>×</button>
@@ -470,7 +478,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
             <td className="py-2"><span style={{ color: colorDe(l.medio), fontWeight: 600 }}>{MED[l.medio]?.label}</span></td>
             <td className="py-2">{l.operador || <span style={{ color: T.muted }}>—</span>}</td>
             <td className="py-2">{l.cotizada ? <span style={{ color: T.green, fontWeight: 700 }}>Sí</span> : <span style={{ color: T.muted }}>No</span>}</td>
-            {conVendedor && <td className="py-2">{l.vendedorNombre}</td>}<td className="py-2">{labelDe(l.mes)}</td>
+            {conVendedor && <td className="py-2">{l.vendedorNombre}</td>}<td className="py-2" style={{ color: T.muted, fontSize: 12 }}>{(l.mes || "").slice(0,4)}</td><td className="py-2">{LABELS_MES[Number((l.mes||"").slice(5,7))-1]}</td>
             {acc && <td className="py-2" style={{ whiteSpace: "nowrap" }}>
               {onSave && <button onClick={() => abrir(l)} style={{ border: "none", background: "transparent", color: T.blue, cursor: "pointer", fontSize: 13 }}>✏️</button>}
               {onDelete && <button onClick={() => onDelete(l.id)} style={{ border: "none", background: "transparent", color: T.red, cursor: "pointer", fontSize: 14, marginLeft: 4 }}>🗑</button>}
