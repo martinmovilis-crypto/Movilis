@@ -174,26 +174,8 @@ export default function App() {
   const temaProps = { tema, cambiarTema };
 
   const [cargando, setCargando] = useState(true);
-  const [splash, setSplash] = useState(true);
   const [sesion, setSesion] = useState(null);
   const [datos, setDatos] = useState({ leads: [], inversion: {}, crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
-
-  useEffect(() => {
-    let t = setTimeout(() => setSplash(false), 3000);
-    // Reaparece al reabrir la app desde segundo plano (PWA instalada)
-    let oculta = Date.now();
-    const onVis = () => {
-      if (document.visibilityState === "hidden") { oculta = Date.now(); return; }
-      // Si estuvo cerrada/oculta más de 30s, mostramos la portada otra vez
-      if (Date.now() - oculta > 30000) {
-        setSplash(true);
-        clearTimeout(t);
-        t = setTimeout(() => setSplash(false), 3000);
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => { clearTimeout(t); document.removeEventListener("visibilitychange", onVis); };
-  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => manejarSesion(data.session));
@@ -236,7 +218,6 @@ export default function App() {
   }, [sesion]);
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
-  if (splash) return <Splash />;
   if (cargando) return <Centro><p style={{ color: T.muted }}>Cargando…</p></Centro>;
   if (!sesion) return <Login {...temaProps} />;
   if (!sesion.perfil) return <Centro><p style={{ color: T.red }}>No se encontró el perfil del usuario.</p></Centro>;
@@ -246,22 +227,6 @@ export default function App() {
 }
 function Centro({ children }) {
   return <div style={{ fontFamily: FONT, background: T.paper, minHeight: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>;
-}
-
-function Splash() {
-  return (
-    <div style={{ fontFamily: FONT, background: "#16324F", minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: 24, overflow: "hidden" }}>
-      <style>{`
-        @keyframes splashPop { 0% { opacity: 0; transform: scale(.6); } 55% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
-        @keyframes splashUp { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }
-        @keyframes splashGlow { 0%,100% { text-shadow: 0 0 14px rgba(255,255,255,.25); } 50% { text-shadow: 0 0 26px rgba(255,255,255,.55); } }
-      `}</style>
-      <img src={LOGO} alt="LeadAdmin" style={{ height: 120, maxWidth: "70%", objectFit: "contain", animation: "splashPop .9s cubic-bezier(.18,.89,.32,1.28) both" }} />
-      <div style={{ marginTop: 28, color: "#fff", fontSize: "clamp(30px, 9vw, 64px)", fontWeight: 900, letterSpacing: 1, lineHeight: 1.05, animation: "splashUp .7s ease-out .5s both, splashGlow 2s ease-in-out 1.2s infinite" }}>
-        SE PUEDE<br />ALQUILAR
-      </div>
-    </div>
-  );
 }
 
 // ── LOGIN ────────────────────────────────────────────────────────────
