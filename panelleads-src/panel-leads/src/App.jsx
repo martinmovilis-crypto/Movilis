@@ -67,14 +67,16 @@ const PART_KEYS = MEDIOS.filter((m) => m.grupo === "part").map((m) => m.key);
 const CORP_KEYS = MEDIOS.filter((m) => m.grupo === "corp").map((m) => m.key);
 
 // ── Meses ────────────────────────────────────────────────────────────
+const LABELS_MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+// Años elegibles al editar la fecha de un lead (histórico viejo incluido)
+const ANIOS_EDIT = (() => { const r = []; for (let y = 2020; y <= new Date().getFullYear(); y++) r.push(String(y)); return r; })();
 function generarMeses() {
-  const LABELS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   const hoy = new Date();
   const fin = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() >= 15 ? 1 : 0), 1);
   const result = [];
-  let y = 2020, m = 1;
+  let y = 2025, m = 1;
   while (y < fin.getFullYear() || (y === fin.getFullYear() && m <= fin.getMonth() + 1)) {
-    result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS[m-1]} ${y}` });
+    result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS_MES[m-1]} ${y}` });
     if (++m > 12) { m = 1; y++; }
   }
   return result;
@@ -86,7 +88,7 @@ const MES_ACTUAL = MESES[MESES.length - 1]?.key ?? "2026-06";
 const CORTE_REAL = (() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; })();
 const nf = new Intl.NumberFormat("es-AR");
 const cf = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-const labelDe = (k) => MESES.find((m) => m.key === k)?.label ?? k;
+const labelDe = (k) => { const [y, m] = String(k || "").split("-"); const lb = LABELS_MES[Number(m) - 1]; return lb ? `${lb} ${y}` : k; };
 
 function contarPorMes(leadsArr) {
   return MESES.map((m) => {
@@ -436,8 +438,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
   useEffect(() => { setPag((p) => Math.min(p, totalPags - 1)); }, [totalPags]);
   const visibles = filas.slice(pag * tope, pag * tope + tope);
   const ei = { width: "100%", border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, outline: "none" };
-  const ANIOS = Array.from(new Set(MESES.map((m) => m.key.slice(0, 4)))).sort();
-  const LABELS_MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const ANIOS = ANIOS_EDIT;
   function abrir(l) {
     const [anio, numMes] = (l.mes || "").split("-");
     setEditId(l.id);
@@ -628,6 +629,7 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const misLeadsTodos = useMemo(() => datos.leads.filter((l) => l.vendedor_id === yoId), [datos.leads, yoId]);
   const miResumen = useMemo(() => contarPorMes(misLeadsTodos), [misLeadsTodos]);
   const miHistLista = useMemo(() => misLeadsTodos.filter((l) => fHmes === "todos" || l.mes === fHmes), [misLeadsTodos, fHmes]);
+  const mesesFiltro = useMemo(() => { const s = new Set(MESES.map((m) => m.key)); misLeadsTodos.forEach((l) => l.mes && s.add(l.mes)); return Array.from(s).sort(); }, [misLeadsTodos]);
   const misEmpresas = datos.empresas.filter((e) => e.vendedor_id === yoId);
 
   return (
@@ -726,7 +728,7 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
               { head: "Mis interac. CRM", render: (d) => nf.format(datos.crm[`${yoId}::${d.key}`] || 0) },
             ]} />
             <Card style={{ padding: 14 }}>
-              <div style={{ maxWidth: 220 }}><Field label="Filtrar por mes"><Select value={fHmes} onChange={setFHmes} options={[["todos", "Todos los meses"], ...MESES.map((m) => [m.key, m.label])]} /></Field></div>
+              <div style={{ maxWidth: 220 }}><Field label="Filtrar por mes"><Select value={fHmes} onChange={setFHmes} options={[["todos", "Todos los meses"], ...mesesFiltro.map((k) => [k, labelDe(k)])]} /></Field></div>
             </Card>
             <ListaLeads filas={miHistLista} conVendedor={false} onSave={guardarLeadEdit} onDelete={borrarLead} />
           </div>
@@ -784,14 +786,14 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
     if (error) return flash(setAvisoRes, "Error: " + error.message);
     flash(setAvisoRes, `Actualizado · ${labelDe(mesInv)}`); setReservasInput(""); setDiasInput(""); recargar();
   }
-  async function guardarLeadEdit(id, patch) { await supabase.from("leads").update(patch).eq("id", id); recargar(); }
-  async function guardarEmpresaEdit(id, patch) { await supabase.from("empresas_activas").update(patch).eq("id", id); recargar(); }
+  async function guardarLeadEdit(id, patch) { const { error } = await supabase.from("leads").update(patch).eq("id", id); if (error) alert("No se pudo guardar: " + error.message); recargar(); }
+  async function guardarEmpresaEdit(id, patch) { const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id); if (error) alert("No se pudo guardar: " + error.message); recargar(); }
   async function cambiarRol(id, rol) {
     await supabase.from("profiles").update({ rol }).eq("id", id);
     flash(setAvisoU, "Rol actualizado. La persona lo verá al volver a entrar."); recargar();
   }
   async function borrarUsuario(id, nombre) {
-    if (!confirm(`¿Borrar a ${nombre}? Se eliminan también todos sus datos.`)) return;
+    if (!confirm(`¿Borrar a ${nombre}? Sus leads quedan en la base sin asignar (se pueden reclamar al re-registrarse).`)) return;
     const { data: s } = await supabase.auth.getSession();
     const token = s?.session?.access_token;
     const res = await fetch(`${SUPABASE_URL}/functions/v1/borrar_usuario`, {
@@ -849,6 +851,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const filtrados = useMemo(() => datos.leads.filter((l) => (fMes === "todos" || l.mes === fMes) && (fMed === "todos" || l.medio === fMed) && (fVend === "todos" || l.vendedor_id === fVend) && (fAsesor === "todos" || l.operador === fAsesor)), [datos.leads, fMes, fMed, fVend, fAsesor]);
   const cotizadasFiltradas = useMemo(() => filtrados.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [filtrados]);
   const asesores = useMemo(() => Array.from(new Set(datos.leads.map((l) => l.operador).filter(Boolean))).sort(), [datos.leads]);
+  const mesesFiltro = useMemo(() => { const s = new Set(MESES.map((m) => m.key)); datos.leads.forEach((l) => l.mes && s.add(l.mes)); return Array.from(s).sort(); }, [datos.leads]);
   const filtCount = useMemo(() => { const c = {}; filtrados.forEach((l) => (c[l.medio] = (c[l.medio] || 0) + 1)); return c; }, [filtrados]);
   const empFiltradas = useMemo(() => datos.empresas.filter((e) => fVend === "todos" || e.vendedor_id === fVend), [datos.empresas, fVend]);
 
@@ -967,7 +970,7 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
             </div>
             <Card style={{ padding: 18 }}>
               <div className="flex flex-wrap items-end gap-3">
-                <div style={{ flex: "1 1 150px" }}><Field label="Mes"><Select value={fMes} onChange={setFMes} options={[["todos", "Todos"], ...MESES.map((m) => [m.key, m.label])]} /></Field></div>
+                <div style={{ flex: "1 1 150px" }}><Field label="Mes"><Select value={fMes} onChange={setFMes} options={[["todos", "Todos"], ...mesesFiltro.map((k) => [k, labelDe(k)])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Medio"><Select value={fMed} onChange={setFMed} options={[["todos", "Todos"], ...MEDIOS.map((c) => [c.key, c.label])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Vendedor"><Select value={fVend} onChange={setFVend} options={[["todos", "Todos"], ...datos.vendedores.map((v) => [v.id, v.nombre])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Asesor"><Select value={fAsesor} onChange={setFAsesor} options={[["todos", "Todos"], ...asesores.map((a) => [a, a])]} /></Field></div>
