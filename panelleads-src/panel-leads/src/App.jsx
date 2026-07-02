@@ -175,7 +175,7 @@ export default function App() {
 
   const [cargando, setCargando] = useState(true);
   const [sesion, setSesion] = useState(null);
-  const [datos, setDatos] = useState({ leads: [], inversion: {}, crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
+  const [datos, setDatos] = useState({ leads: [], crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => manejarSesion(data.session));
@@ -194,22 +194,20 @@ export default function App() {
   const cargarDatos = useCallback(async () => {
     if (!sesion) return;
     const full = sesion.perfil?.rol === "jefe" || sesion.perfil?.rol === "admin";
-    const [{ data: leads }, { data: inv }, { data: crm }, { data: profs }, { data: emp }, { data: rep }] = await Promise.all([
-      supabase.from("leads").select("*").order("created_at", { ascending: false }),
-      supabase.from("inversion").select("*"),
-      supabase.from("interacciones_crm").select("*"),
+    const [{ data: leads }, { data: crm }, { data: profs }, { data: emp }, { data: rep }] = await Promise.all([
+      supabase.from("leads").select("id,nombre,contacto,medio,operador,cotizada,mes,vendedor_id").order("created_at", { ascending: false }),
+      supabase.from("interacciones_crm").select("vendedor_id,mes,cantidad"),
       full ? supabase.from("profiles").select("id,nombre,apellido,usuario,email,rol") : Promise.resolve({ data: [sesion.perfil] }),
-      supabase.from("empresas_activas").select("*").order("created_at", { ascending: false }),
+      supabase.from("empresas_activas").select("id,nombre,contactos,cuit,unidades,presupuestos_nuevos,vendedor_id").order("created_at", { ascending: false }),
       full ? supabase.from("reporte_mensual").select("*") : Promise.resolve({ data: [] }),
     ]);
     const mapaNombre = {};
     (profs || []).forEach((p) => (mapaNombre[p.id] = `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim()));
-    const invMap = {}; (inv || []).forEach((r) => (invMap[r.mes] = Number(r.monto)));
     const crmMap = {}; (crm || []).forEach((r) => (crmMap[`${r.vendedor_id}::${r.mes}`] = r.cantidad));
     const repMap = {}; (rep || []).forEach((r) => (repMap[r.mes] = r));
     setDatos({
       leads: (leads || []).map((l) => ({ ...l, vendedorNombre: mapaNombre[l.vendedor_id] || "—" })),
-      inversion: invMap, crm: crmMap,
+      crm: crmMap,
       vendedores: (profs || []).filter((p) => p.rol === "ventas").map((p) => ({ id: p.id, nombre: `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim() })),
       usuarios: profs || [],
       empresas: (emp || []).map((e) => ({ ...e, vendedorNombre: mapaNombre[e.vendedor_id] || "—" })),
@@ -221,7 +219,7 @@ export default function App() {
   if (cargando) return <Centro><p style={{ color: T.muted }}>Cargando…</p></Centro>;
   if (!sesion) return <Login {...temaProps} />;
   if (!sesion.perfil) return <Centro><p style={{ color: T.red }}>No se encontró el perfil del usuario.</p></Centro>;
-  const props = { sesion, datos, recargar: cargarDatos, salir: () => supabase.auth.signOut(), ...temaProps };
+  const props = { sesion, datos, recargar: cargarDatos, mutar: setDatos, salir: () => supabase.auth.signOut(), ...temaProps };
   const full = sesion.perfil.rol === "jefe" || sesion.perfil.rol === "admin";
   return full ? <PanelJefe {...props} /> : <PanelVentas {...props} />;
 }
@@ -410,7 +408,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
     setD({ nombre: l.nombre || "", contacto: l.contacto || "", medio: l.medio, operador: l.operador || "", cotizada: !!l.cotizada, anio: anio || "2025", numMes: numMes || "01" });
   }
   function mesKey() { return `${d.anio}-${d.numMes}`; }
-  async function guardar() { await onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: mesKey() }); setEditId(null); }
+  function guardar() { onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: mesKey() }); setEditId(null); }
   const acc = onSave || onDelete;
   return (
     <Card style={{ padding: 20, overflowX: "auto" }}>
@@ -477,7 +475,7 @@ function TablaEmpresas({ filas, conVendedor, onDelete, onSave }) {
   const [d, setD] = useState({});
   const ei = { width: "100%", border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, outline: "none" };
   function abrir(e) { setEditId(e.id); setD({ nombre: e.nombre || "", contactos: e.contactos || "", cuit: e.cuit || "", unidades: e.unidades, presupuestos_nuevos: e.presupuestos_nuevos }); }
-  async function guardar() { await onSave(editId, { nombre: d.nombre.trim(), contactos: d.contactos.trim() || null, cuit: d.cuit.trim() || null, unidades: Number(d.unidades) || 0, presupuestos_nuevos: Number(d.presupuestos_nuevos) || 0 }); setEditId(null); }
+  function guardar() { onSave(editId, { nombre: d.nombre.trim(), contactos: d.contactos.trim() || null, cuit: d.cuit.trim() || null, unidades: Number(d.unidades) || 0, presupuestos_nuevos: Number(d.presupuestos_nuevos) || 0 }); setEditId(null); }
   const acc = onSave || onDelete;
   return (
     <Card style={{ padding: 20, overflowX: "auto" }}>
@@ -525,7 +523,7 @@ function TablaEmpresas({ filas, conVendedor, onDelete, onSave }) {
 }
 
 // ── PANEL VENTAS ─────────────────────────────────────────────────────
-function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
+function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema }) {
   const yoId = sesion.user.id;
   const [vista, setVista] = useState("cargar");
   const [mesSel, setMesSel] = useState(MES_ACTUAL);
@@ -581,10 +579,28 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
     flash(setAvisoEmp, "Empresa cargada.");
     setEmp({ nombre: "", contactos: "", cuit: "", unidades: "", presupuestos_nuevos: "" }); recargar();
   }
-  async function guardarLeadEdit(id, patch) { const { error } = await supabase.from("leads").update(patch).eq("id", id); if (!error) recargar(); }
-  async function guardarEmpresaEdit(id, patch) { const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id); if (!error) recargar(); }
-  async function borrarLead(id) { if (!confirm("¿Borrar este lead?")) return; await supabase.from("leads").delete().eq("id", id); recargar(); }
-  async function borrarEmpresa(id) { if (!confirm("¿Borrar esta empresa?")) return; await supabase.from("empresas_activas").delete().eq("id", id); recargar(); }
+  async function guardarLeadEdit(id, patch) {
+    mutar((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
+    const { error } = await supabase.from("leads").update(patch).eq("id", id);
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  }
+  async function guardarEmpresaEdit(id, patch) {
+    mutar((d) => ({ ...d, empresas: d.empresas.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+    const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  }
+  async function borrarLead(id) {
+    if (!confirm("¿Borrar este lead?")) return;
+    mutar((d) => ({ ...d, leads: d.leads.filter((l) => l.id !== id) }));
+    const { error } = await supabase.from("leads").delete().eq("id", id);
+    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
+  }
+  async function borrarEmpresa(id) {
+    if (!confirm("¿Borrar esta empresa?")) return;
+    mutar((d) => ({ ...d, empresas: d.empresas.filter((e) => e.id !== id) }));
+    const { error } = await supabase.from("empresas_activas").delete().eq("id", id);
+    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
+  }
 
   const previewPart = preview.filter((p) => grupoDe(p.medio) === "part").length;
   const previewCorp = preview.filter((p) => grupoDe(p.medio) === "corp").length;
@@ -704,7 +720,7 @@ function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
 }
 
 // ── PANEL JEFE / ADMIN ───────────────────────────────────────────────
-function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
+function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema }) {
   const esAdmin = sesion.perfil.rol === "admin";
   const tip = { background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, fontSize: 12, color: T.ink };
   const [vista, setVista] = useState("tablero");
@@ -734,11 +750,15 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   }
   async function borrarLead(id) {
     if (!confirm("¿Borrar este lead?")) return;
-    await supabase.from("leads").delete().eq("id", id); recargar();
+    mutar((d) => ({ ...d, leads: d.leads.filter((l) => l.id !== id) }));
+    const { error } = await supabase.from("leads").delete().eq("id", id);
+    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
   }
   async function borrarEmpresa(id) {
     if (!confirm("¿Borrar esta empresa?")) return;
-    await supabase.from("empresas_activas").delete().eq("id", id); recargar();
+    mutar((d) => ({ ...d, empresas: d.empresas.filter((e) => e.id !== id) }));
+    const { error } = await supabase.from("empresas_activas").delete().eq("id", id);
+    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
   }
   async function guardarReservas() {
     if (!reservasInput && !diasInput) return flash(setAvisoRes, "Ingresá al menos un valor.");
@@ -751,8 +771,16 @@ function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
     if (error) return flash(setAvisoRes, "Error: " + error.message);
     flash(setAvisoRes, `Actualizado · ${labelDe(mesInv)}`); setReservasInput(""); setDiasInput(""); recargar();
   }
-  async function guardarLeadEdit(id, patch) { const { error } = await supabase.from("leads").update(patch).eq("id", id); if (error) alert("No se pudo guardar: " + error.message); recargar(); }
-  async function guardarEmpresaEdit(id, patch) { const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id); if (error) alert("No se pudo guardar: " + error.message); recargar(); }
+  async function guardarLeadEdit(id, patch) {
+    mutar((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
+    const { error } = await supabase.from("leads").update(patch).eq("id", id);
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  }
+  async function guardarEmpresaEdit(id, patch) {
+    mutar((d) => ({ ...d, empresas: d.empresas.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
+    const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  }
   async function cambiarRol(id, rol) {
     await supabase.from("profiles").update({ rol }).eq("id", id);
     flash(setAvisoU, "Rol actualizado. La persona lo verá al volver a entrar."); recargar();
