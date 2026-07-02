@@ -74,7 +74,7 @@ function generarMeses() {
   const hoy = new Date();
   const fin = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() >= 15 ? 1 : 0), 1);
   const result = [];
-  let y = 2025, m = 1;
+  let y = 2026, m = 6;
   while (y < fin.getFullYear() || (y === fin.getFullYear() && m <= fin.getMonth() + 1)) {
     result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS_MES[m-1]} ${y}` });
     if (++m > 12) { m = 1; y++; }
@@ -85,7 +85,7 @@ const MESES = generarMeses();
 const MES_ACTUAL = MESES[MESES.length - 1]?.key ?? "2026-06";
 // Desde este mes en adelante el tablero cuenta leads reales cargados por los
 // vendedores. Los meses anteriores conservan el histórico viejo (reporte_mensual).
-const CORTE_REAL = (() => { const h = new Date(); return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}`; })();
+const CORTE_REAL = "2026-06";
 const nf = new Intl.NumberFormat("es-AR");
 const cf = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 const labelDe = (k) => { const [y, m] = String(k || "").split("-"); const lb = LABELS_MES[Number(m) - 1]; return lb ? `${lb} ${y}` : k; };
