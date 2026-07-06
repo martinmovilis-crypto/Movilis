@@ -658,7 +658,7 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
                         ))}</tbody>
                       </table>
                     </div>
-                    <button disabled={busy} onClick={confirmar} className="mt-3 w-full py-3" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Guardando…" : `Confirmar ${preview.length} leads`}</button>
+                    <button disabled={busy} onClick={confirmar} className="mt-3 w-full py-3" style={{ background: T.ink, color: T.paper, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Guardando…" : `Confirmar ${preview.length} leads`}</button>
                   </>
                 )}
               </Card>
