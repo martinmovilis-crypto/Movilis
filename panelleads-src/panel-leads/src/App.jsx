@@ -441,7 +441,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
           <tr key={l.id} style={{ borderTop: `1px solid ${T.line}` }}>
             <td className="py-2">{l.nombre || <span style={{ color: T.muted }}>—</span>}</td>
             <td className="py-2">{l.contacto || <span style={{ color: T.muted }}>sin contacto</span>}</td>
-            <td className="py-2"><span style={{ color: colorDe(l.medio), fontWeight: 600 }}>{MED[l.medio]?.label}</span></td>
+            <td className="py-2"><span style={{ color: colorDe(l.medio), fontWeight: 600 }}>{MED[l.medio]?.label || l.medio}</span></td>
             <td className="py-2">{l.operador || <span style={{ color: T.muted }}>—</span>}</td>
             <td className="py-2">{l.cotizada ? <span style={{ color: T.green, fontWeight: 700 }}>Sí</span> : <span style={{ color: T.muted }}>No</span>}</td>
             {conVendedor && <td className="py-2">{l.vendedorNombre}</td>}<td className="py-2" style={{ color: T.muted, fontSize: 12 }}>{(l.mes || "").slice(0,4)}</td><td className="py-2">{LABELS_MES[Number((l.mes||"").slice(5,7))-1]}</td>
