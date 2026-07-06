@@ -889,7 +889,14 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                     <PieChart>
                       <Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} />
                       <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => <span style={{ color: T.ink }}>{v}</span>} />
-                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={105} paddingAngle={3} label={{ fill: T.ink, fontSize: 13, fontWeight: 600 }} stroke={T.card}>
+                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={100} paddingAngle={3} stroke={T.card}
+                        label={({ cx, cy, midAngle, outerRadius, name, value }) => {
+                          const RAD = Math.PI / 180;
+                          const r = outerRadius + 16;
+                          const x = cx + r * Math.cos(-midAngle * RAD);
+                          const y = cy + r * Math.sin(-midAngle * RAD);
+                          return <text x={x} y={y} fill={T.ink} fontSize={12.5} fontWeight={600} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central">{`${name}: ${nf.format(value)}`}</text>;
+                        }}>
                         {desglose.map((_, i) => <Cell key={i} fill={[T.blue, T.teal, T.gold, T.green, "#7c3aed", "#db2777"][i % 6]} />)}
                       </Pie>
                     </PieChart>
