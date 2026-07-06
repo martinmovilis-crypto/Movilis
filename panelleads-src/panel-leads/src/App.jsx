@@ -61,7 +61,6 @@ const MEDIOS = [
   { key: "particularesDarwin", label: "Darwin particulares",     grupo: "part", kw: ["particulares darwin", "darwin particulares", "particular darwin", "particulares", "darwin"] },
   { key: "empresasDarwin",     label: "Empresas Darwin",         grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
   { key: "emailsDerivar",      label: "Presupuestos corporativos", grupo: "corp", kw: ["presupuestos corporativos", "presupuesto corporativo", "emails derivar", "email derivar", "derivar", "front"] },
-  { key: "promoFinde",         label: "Promo finde",             grupo: "part", kw: ["promo finde", "promofinde", "promo", "finde"] },
 ];
 const MED = MEDIOS.reduce((a, c) => ((a[c.key] = c), a), {});
 const grupoDe = (k) => MED[k]?.grupo;
@@ -733,6 +732,7 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const [reservasInput, setReservasInput] = useState("");
   const [diasInput, setDiasInput] = useState("");
   const [avisoRes, setAvisoRes] = useState("");
+  const [promoEdit, setPromoEdit] = useState({});
   const [fMes, setFMes] = useState("todos");
   const [fMed, setFMed] = useState("todos");
   const [fVend, setFVend] = useState("todos");
@@ -784,6 +784,14 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
     if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
   }
+  async function guardarPromo(mes) {
+    const v = Number(promoEdit[mes]) || 0;
+    // leads_part guarda el valor manual de Promo finde para los meses del corte en adelante
+    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, leads_part: v } } }));
+    setPromoEdit((p) => { const n = { ...p }; delete n[mes]; return n; });
+    const { error } = await supabase.from("reporte_mensual").upsert({ mes, leads_part: v, updated_at: new Date().toISOString() }, { onConflict: "mes" });
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  }
   async function cambiarRol(id, rol) {
     await supabase.from("profiles").update({ rol }).eq("id", id);
     flash(setAvisoU, "Rol actualizado. La persona lo verá al volver a entrar."); recargar();
@@ -808,13 +816,17 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const o = { key: m.key, label: m.label, inv, crm: crmTotal };
     if (m.key < CORTE_REAL) {
       MEDIOS.forEach((c) => (o[c.key] = 0));
+      o.promoFinde = 0;
       o.part = Number(r.leads_part) || 0;
       o.corp = Number(r.leads_corp) || 0;
       o.historico = true;
     } else {
       const mesLeads = datos.leads.filter((l) => l.mes === m.key);
       MEDIOS.forEach((c) => (o[c.key] = mesLeads.filter((l) => l.medio === c.key).length));
-      o.part = PART_KEYS.reduce((a, k) => a + o[k], 0);
+      // Promo finde: número que carga el jefe a mano en el cuadro.
+      // Desde el corte, reporte_mensual.leads_part guarda ese valor manual.
+      o.promoFinde = Number(r.leads_part) || 0;
+      o.part = PART_KEYS.reduce((a, k) => a + o[k], 0) + o.promoFinde;
       o.corp = CORP_KEYS.reduce((a, k) => a + o[k], 0);
     }
     o.total = o.part + o.corp;
@@ -922,7 +934,21 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                       {MEDIOS.filter((c) => c.key !== "promoFinde").map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.gold }}>{nf.format(d.corp)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.blue }}>{nf.format(d.part)}</td>
-                      <td className="py-2 tabular-nums" style={{ color: T.teal, fontWeight: 600 }}>{nf.format(d.promoFinde)}</td>
+                      <td className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {d.historico ? <span className="tabular-nums" style={{ color: T.teal, fontWeight: 600 }}>{nf.format(d.promoFinde)}</span> : (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number"
+                              value={promoEdit[d.key] ?? String(d.promoFinde)}
+                              onChange={(e) => setPromoEdit({ ...promoEdit, [d.key]: e.target.value })}
+                              style={{ width: 58, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.teal, fontWeight: 600, textAlign: "right", outline: "none" }}
+                            />
+                            {promoEdit[d.key] != null && promoEdit[d.key] !== String(d.promoFinde) && (
+                              <button onClick={() => guardarPromo(d.key)} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
+                            )}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{nf.format(d.total)}</td>
                       <td className="py-2 tabular-nums">{cf.format(d.inv)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{cf.format(d.costo)}</td>
