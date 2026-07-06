@@ -25,9 +25,9 @@ function exportarExcel({ leads, empresas, resumen, conVendedor, archivo }) {
   if (resumen) {
     const r = resumen.map((d) => {
       const row = { Mes: d.label };
-      MEDIOS.filter((c) => c.key !== "promoFinde").forEach((c) => (row[c.label] = d[c.key] ?? 0));
+      MEDIOS.forEach((c) => (row[c.label] = d[c.key] ?? 0));
       row["Leads corporativos"] = d.corp; row["Leads particulares"] = d.part;
-      row["Promo finde"] = d.promoFinde ?? 0; row.Total = d.total;
+      row.Total = d.total;
       row["Inversión"] = d.inv ?? 0;
       row["Costo por lead"] = d.costo ?? 0; row["Costo por lead particular"] = d.costoPart ?? 0; row["Costo por lead corpo"] = d.costoCorp ?? 0;
       return row;
@@ -784,12 +784,13 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
     if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
   }
-  async function guardarPromo(mes) {
-    const v = Number(promoEdit[mes]) || 0;
-    // leads_part guarda el valor manual de Promo finde para los meses del corte en adelante
-    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, leads_part: v } } }));
+  async function guardarPart(mes, partReal) {
+    // El jefe escribe el total de particulares del mes; guardamos la diferencia
+    // con lo contado de leads reales como ajuste manual (reporte_mensual.leads_part).
+    const extra = (Number(promoEdit[mes]) || 0) - partReal;
+    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, leads_part: extra } } }));
     setPromoEdit((p) => { const n = { ...p }; delete n[mes]; return n; });
-    const { error } = await supabase.from("reporte_mensual").upsert({ mes, leads_part: v, updated_at: new Date().toISOString() }, { onConflict: "mes" });
+    const { error } = await supabase.from("reporte_mensual").upsert({ mes, leads_part: extra, updated_at: new Date().toISOString() }, { onConflict: "mes" });
     if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
   }
   async function cambiarRol(id, rol) {
@@ -816,17 +817,17 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const o = { key: m.key, label: m.label, inv, crm: crmTotal };
     if (m.key < CORTE_REAL) {
       MEDIOS.forEach((c) => (o[c.key] = 0));
-      o.promoFinde = 0;
       o.part = Number(r.leads_part) || 0;
       o.corp = Number(r.leads_corp) || 0;
       o.historico = true;
     } else {
       const mesLeads = datos.leads.filter((l) => l.mes === m.key);
       MEDIOS.forEach((c) => (o[c.key] = mesLeads.filter((l) => l.medio === c.key).length));
-      // Promo finde: número que carga el jefe a mano en el cuadro.
-      // Desde el corte, reporte_mensual.leads_part guarda ese valor manual.
-      o.promoFinde = Number(r.leads_part) || 0;
-      o.part = PART_KEYS.reduce((a, k) => a + o[k], 0) + o.promoFinde;
+      // Ajuste manual del jefe sobre los leads particulares (se suma a los contados).
+      // Desde el corte, reporte_mensual.leads_part guarda ese ajuste.
+      o.extraPart = Number(r.leads_part) || 0;
+      o.partReal = PART_KEYS.reduce((a, k) => a + o[k], 0);
+      o.part = o.partReal + o.extraPart;
       o.corp = CORP_KEYS.reduce((a, k) => a + o[k], 0);
     }
     o.total = o.part + o.corp;
@@ -916,10 +917,9 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                 <thead>
                   <tr style={{ color: T.muted, textAlign: "right" }}>
                     <th className="py-2 text-left" style={{ fontWeight: 600 }}>Mes</th>
-                    {MEDIOS.filter((c) => c.key !== "promoFinde").map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
+                    {MEDIOS.map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
                     <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Leads corporativos</th>
                     <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Leads particulares</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.teal }}>Promo finde</th>
                     <th className="py-2" style={{ fontWeight: 700 }}>Total</th>
                     <th className="py-2" style={{ fontWeight: 600 }}>Inversión</th>
                     <th className="py-2" style={{ fontWeight: 700 }}>Costo por lead</th>
@@ -931,20 +931,19 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                   {data.map((d) => (
                     <tr key={d.key} style={{ borderTop: `1px solid ${T.line}`, textAlign: "right" }}>
                       <td className="py-2 text-left" style={{ fontWeight: 600 }}>{d.label}</td>
-                      {MEDIOS.filter((c) => c.key !== "promoFinde").map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
+                      {MEDIOS.map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.gold }}>{nf.format(d.corp)}</td>
-                      <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.blue }}>{nf.format(d.part)}</td>
                       <td className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        {d.historico ? <span className="tabular-nums" style={{ color: T.teal, fontWeight: 600 }}>{nf.format(d.promoFinde)}</span> : (
+                        {d.historico ? <span className="tabular-nums" style={{ color: T.blue, fontWeight: 700 }}>{nf.format(d.part)}</span> : (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                             <input
                               type="number"
-                              value={promoEdit[d.key] ?? String(d.promoFinde)}
+                              value={promoEdit[d.key] ?? String(d.part)}
                               onChange={(e) => setPromoEdit({ ...promoEdit, [d.key]: e.target.value })}
-                              style={{ width: 58, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.teal, fontWeight: 600, textAlign: "right", outline: "none" }}
+                              style={{ width: 58, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.blue, fontWeight: 700, textAlign: "right", outline: "none" }}
                             />
-                            {promoEdit[d.key] != null && promoEdit[d.key] !== String(d.promoFinde) && (
-                              <button onClick={() => guardarPromo(d.key)} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
+                            {promoEdit[d.key] != null && promoEdit[d.key] !== String(d.part) && (
+                              <button onClick={() => guardarPart(d.key, d.partReal)} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
                             )}
                           </span>
                         )}
