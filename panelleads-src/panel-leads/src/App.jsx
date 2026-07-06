@@ -729,10 +729,8 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const [mesInv, setMesInv] = useState(MES_ACTUAL);
   const [montoInv, setMontoInv] = useState("");
   const [avisoInv, setAvisoInv] = useState("");
-  const [reservasInput, setReservasInput] = useState("");
-  const [diasInput, setDiasInput] = useState("");
-  const [avisoRes, setAvisoRes] = useState("");
   const [promoEdit, setPromoEdit] = useState({});
+  const [mesTab, setMesTab] = useState(MES_ACTUAL);
   const [fMes, setFMes] = useState("todos");
   const [fMed, setFMed] = useState("todos");
   const [fVend, setFVend] = useState("todos");
@@ -762,17 +760,6 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     mutar((d) => ({ ...d, empresas: d.empresas.filter((e) => e.id !== id) }));
     const { error } = await supabase.from("empresas_activas").delete().eq("id", id);
     if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
-  }
-  async function guardarReservas() {
-    if (!reservasInput && !diasInput) return flash(setAvisoRes, "Ingresá al menos un valor.");
-    setBusy(true);
-    const patch = { mes: mesInv, updated_at: new Date().toISOString() };
-    if (reservasInput) patch.reservas_particulares = Number(reservasInput) || 0;
-    if (diasInput) patch.dias_reserva = Number(diasInput) || 0;
-    const { error } = await supabase.from("reporte_mensual").upsert(patch, { onConflict: "mes" });
-    setBusy(false);
-    if (error) return flash(setAvisoRes, "Error: " + error.message);
-    flash(setAvisoRes, `Actualizado · ${labelDe(mesInv)}`); setReservasInput(""); setDiasInput(""); recargar();
   }
   async function guardarLeadEdit(id, patch) {
     mutar((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
@@ -837,11 +824,12 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     return o;
   }), [datos]);
   const conMov = data.filter((d) => d.total > 0 || d.inv > 0);
-  const ult = conMov[conMov.length - 1] || data[data.length - 1];
+  // Los KPI muestran el mes elegido en el filtro de fecha del tablero
+  const ult = data.find((d) => d.key === mesTab) || data[data.length - 1];
   const idxUlt = data.findIndex((d) => d.key === ult.key);
   const prev = idxUlt > 0 ? data[idxUlt - 1] : null;
   const deltaCosto = prev?.costo ? ((ult.costo - prev.costo) / prev.costo) * 100 : 0;
-  const totalCotizadas = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [datos.leads]);
+  const cotizadasMes = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada && l.mes === ult.key ? 1 : 0), 0), [datos.leads, ult.key]);
 
   const filtrados = useMemo(() => datos.leads.filter((l) => (fMes === "todos" || l.mes === fMes) && (fMed === "todos" || l.medio === fMed) && (fVend === "todos" || l.vendedor_id === fVend) && (fAsesor === "todos" || l.operador === fAsesor)), [datos.leads, fMes, fMed, fVend, fAsesor]);
   const cotizadasFiltradas = useMemo(() => filtrados.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [filtrados]);
@@ -861,8 +849,11 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
 
         {vista === "tablero" && (
           <div className="mt-6 grid gap-4">
-            <div className="no-print flex flex-wrap items-center justify-between gap-3">
-              <span style={{ fontSize: 13, color: T.muted }}>Reporte de leads · {ult.label}</span>
+            <div className="no-print flex flex-wrap items-end justify-between gap-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <div style={{ minWidth: 170 }}><Field label="Ver datos de"><Select value={mesTab} onChange={setMesTab} options={MESES.map((m) => [m.key, m.label])} /></Field></div>
+                <span style={{ fontSize: 13, color: T.muted, paddingBottom: 10 }}>Reporte de leads · {ult.label}</span>
+              </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => exportarExcel({ resumen: conMov, archivo: `reporte-mensual-${ult.key}.xlsx` })} className="py-2.5 px-4" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar Excel</button>
                 <button onClick={() => window.print()} className="py-2.5 px-4" style={{ background: T.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar PDF</button>
@@ -874,8 +865,8 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
               <Kpi label="Costo / lead total" value={cf.format(ult.costo)} sub={ult.label} accent={T.green} delta={prev ? deltaCosto : null} />
               <Kpi label="Costo / lead particular" value={cf.format(ult.costoPart)} sub={`${nf.format(ult.part)} leads`} accent={T.blue} />
               <Kpi label="Costo / lead corporativo" value={cf.format(ult.costoCorp)} sub={`${nf.format(ult.corp)} leads`} accent={T.gold} />
-              <Kpi label="Cotizaciones" value={nf.format(totalCotizadas)} sub="total cotizadas" accent={T.teal} />
-              {(() => { const r = datos.reporte[ult.key] || {}; const res = Number(r.reservas_particulares) || 0; const dias = Number(r.dias_reserva) || 0; const prom = dias ? (res / dias).toFixed(1) : "—"; return (<><Kpi label="Reservas particulares" value={nf.format(res)} sub={ult.label} accent="#7c3aed" /><Kpi label="Días de reserva" value={nf.format(dias)} sub={ult.label} accent="#db2777" /><Kpi label="Promedio reservas/día" value={prom} sub={dias ? `${nf.format(res)} reservas · ${nf.format(dias)} días` : "Sin datos"} accent="#ea580c" /></>); })()}
+              <Kpi label="Cotizaciones" value={nf.format(cotizadasMes)} sub={`cotizadas · ${ult.label}`} accent={T.teal} />
+              <Kpi label="Presupuestos corporativos" value={nf.format(ult.emailsDerivar || 0)} sub={ult.label} accent="#7c3aed" />
             </div>
             <Card className="no-print" style={{ padding: 18 }}>
               <div className="flex flex-wrap items-end gap-3">
@@ -883,12 +874,6 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                 <div style={{ flex: "1 1 200px" }}><Field label="Inversión del mes (ARS)"><Txt value={montoInv} onChange={setMontoInv} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].inversion) || 0)} /></Field></div>
                 <button disabled={busy} onClick={guardarInversion} className="py-3 px-5" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar inversión</button>
                 {avisoInv && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoInv}</span>}
-              </div>
-              <div className="flex flex-wrap items-end gap-3 mt-3" style={{ borderTop: `1px solid ${T.line}`, paddingTop: 14 }}>
-                <div style={{ flex: "1 1 200px" }}><Field label="Reservas particulares"><Txt value={reservasInput} onChange={setReservasInput} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].reservas_particulares) || 0)} /></Field></div>
-                <div style={{ flex: "1 1 200px" }}><Field label="Días de reserva"><Txt value={diasInput} onChange={setDiasInput} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].dias_reserva) || 0)} /></Field></div>
-                <button disabled={busy} onClick={guardarReservas} className="py-3 px-5" style={{ background: "#7c3aed", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar reservas</button>
-                {avisoRes && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoRes}</span>}
               </div>
             </Card>
             <Card style={{ padding: 18 }}>
@@ -917,7 +902,7 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                 <thead>
                   <tr style={{ color: T.muted, textAlign: "right" }}>
                     <th className="py-2 text-left" style={{ fontWeight: 600 }}>Mes</th>
-                    {MEDIOS.map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
+                    {MEDIOS.filter((c) => c.key !== "emailsDerivar").map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
                     <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Leads corporativos</th>
                     <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Leads particulares</th>
                     <th className="py-2" style={{ fontWeight: 700 }}>Total</th>
@@ -931,7 +916,7 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                   {data.map((d) => (
                     <tr key={d.key} style={{ borderTop: `1px solid ${T.line}`, textAlign: "right" }}>
                       <td className="py-2 text-left" style={{ fontWeight: 600 }}>{d.label}</td>
-                      {MEDIOS.map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
+                      {MEDIOS.filter((c) => c.key !== "emailsDerivar").map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.gold }}>{nf.format(d.corp)}</td>
                       <td className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                         {d.historico ? <span className="tabular-nums" style={{ color: T.blue, fontWeight: 700 }}>{nf.format(d.part)}</span> : (
