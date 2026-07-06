@@ -56,7 +56,7 @@ const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helve
 // ── Medios (canal por el que se consiguió el lead) ───────────────────
 const MEDIOS = [
   { key: "leadsInfo",          label: "Leads particulares info", grupo: "part", kw: ["leads particulares info", "particulares info", "leads info"] },
-  { key: "infoRenting",        label: "info@renting",            grupo: "part", kw: ["info renting", "info@renting", "renting"] },
+  { key: "infoRenting",        label: "info@renting",            grupo: "corp", kw: ["info renting", "info@renting", "renting"] },
   { key: "waalax",             label: "LinkedIn",                grupo: "corp", kw: ["linkedin seba", "linkedin", "seba", "walaxi/fml", "walaxi", "waalax", "walax", "fml"] },
   { key: "particularesDarwin", label: "Darwin particulares",     grupo: "part", kw: ["particulares darwin", "darwin particulares", "particular darwin", "particulares", "darwin"] },
   { key: "empresasDarwin",     label: "Empresas Darwin",         grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
