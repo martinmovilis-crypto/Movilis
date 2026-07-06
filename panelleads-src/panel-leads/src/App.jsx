@@ -838,7 +838,7 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const keys = graf === "part" ? PART_KEYS : CORP_KEYS;
     const rows = keys.map((k) => ({ label: MED[k].label, cantidad: ult[k] || 0 }));
     const extra = (graf === "part" ? ult.extraPart : ult.extraCorp) || 0;
-    if (extra) rows.push({ label: "Ajuste jefe", cantidad: extra });
+    if (extra) rows.push({ label: graf === "part" ? "Leads particulares" : "Leads corporativos", cantidad: extra });
     return rows;
   }, [graf, ult]);
 
