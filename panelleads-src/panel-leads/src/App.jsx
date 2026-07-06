@@ -833,6 +833,14 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const prev = idxUlt > 0 ? data[idxUlt - 1] : null;
   const deltaCosto = prev?.costo ? ((ult.costo - prev.costo) / prev.costo) * 100 : 0;
   const cotizadasMes = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada && l.mes === ult.key ? 1 : 0), 0), [datos.leads, ult.key]);
+  // Desglose por medio del mes elegido, para los gráficos de particulares/corporativos
+  const desglose = useMemo(() => {
+    const keys = graf === "part" ? PART_KEYS : CORP_KEYS;
+    const rows = keys.map((k) => ({ label: MED[k].label, cantidad: ult[k] || 0 }));
+    const extra = (graf === "part" ? ult.extraPart : ult.extraCorp) || 0;
+    if (extra) rows.push({ label: "Ajuste jefe", cantidad: extra });
+    return rows;
+  }, [graf, ult]);
 
   const filtrados = useMemo(() => datos.leads.filter((l) => (fMes === "todos" || l.mes === fMes) && (fMed === "todos" || l.medio === fMed) && (fVend === "todos" || l.vendedor_id === fVend) && (fAsesor === "todos" || l.operador === fAsesor)), [datos.leads, fMes, fMed, fVend, fAsesor]);
   const cotizadasFiltradas = useMemo(() => filtrados.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [filtrados]);
@@ -881,15 +889,13 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
             </Card>
             <Card style={{ padding: 18 }}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: 9, background: graf === "inv" ? T.teal : graf === "part" ? T.blue : T.gold, display: "inline-block" }} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{({ part: "Leads particulares", corp: "Leads corporativos", inv: "Inversión", costo: "Costo por lead" })[graf]}</span></div>
+                <div className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: 9, background: graf === "inv" ? T.teal : graf === "part" ? T.blue : T.gold, display: "inline-block" }} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{({ part: `Leads particulares · ${ult.label}`, corp: `Leads corporativos · ${ult.label}`, inv: "Inversión (por mes)", costo: "Costo por lead (por mes)" })[graf]}</span></div>
                 <div style={{ minWidth: 200 }}><Select value={graf} onChange={setGraf} options={[["part", "Leads particulares"], ["corp", "Leads corporativos"], ["inv", "Inversión"], ["costo", "Costo por lead"]]} /></div>
               </div>
               <div className="mt-3" style={{ width: "100%", height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  {graf === "part" ? (
-                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Line type="monotone" dataKey="part" name="Particulares" stroke={T.blue} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
-                  ) : graf === "corp" ? (
-                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Line type="monotone" dataKey="corp" name="Corporativos" stroke={T.gold} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
+                  {graf === "part" || graf === "corp" ? (
+                    <BarChart data={desglose} margin={{ bottom: 10 }}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10.5, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} interval={0} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} allowDecimals={false} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Bar dataKey="cantidad" name="Leads" fill={graf === "part" ? T.blue : T.gold} radius={[4, 4, 0, 0]} maxBarSize={64} /></BarChart>
                   ) : graf === "inv" ? (
                     <BarChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1e6)}M`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Bar dataKey="inv" name="Inversión" fill={T.teal} radius={[4, 4, 0, 0]} /></BarChart>
                   ) : (
