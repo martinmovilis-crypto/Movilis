@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis,
+  LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 import { LOGO } from "./logo";
@@ -726,9 +727,6 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const esAdmin = sesion.perfil.rol === "admin";
   const tip = { background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, fontSize: 12, color: T.ink };
   const [vista, setVista] = useState("tablero");
-  const [mesInv, setMesInv] = useState(MES_ACTUAL);
-  const [montoInv, setMontoInv] = useState("");
-  const [avisoInv, setAvisoInv] = useState("");
   const [promoEdit, setPromoEdit] = useState({});
   const [mesTab, setMesTab] = useState(MES_ACTUAL);
   const [fMes, setFMes] = useState("todos");
@@ -736,18 +734,18 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const [fVend, setFVend] = useState("todos");
   const [fAsesor, setFAsesor] = useState("todos");
   const [graf, setGraf] = useState("part");
-  const [busy, setBusy] = useState(false);
   const [avisoU, setAvisoU] = useState("");
   const hoy = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
   function flash(s, m) { s(m); setTimeout(() => s(""), 3500); }
 
-  async function guardarInversion() {
-    if (!montoInv) return flash(setAvisoInv, "Ingresá un monto.");
-    setBusy(true);
-    const { error } = await supabase.from("reporte_mensual").upsert({ mes: mesInv, inversion: Number(montoInv) || 0, updated_at: new Date().toISOString() }, { onConflict: "mes" });
-    setBusy(false);
-    if (error) return flash(setAvisoInv, "Error: " + error.message);
-    flash(setAvisoInv, `Inversión actualizada · ${labelDe(mesInv)}`); setMontoInv(""); recargar();
+  async function guardarInv(mes) {
+    // Inversión editada directamente en la celda del cuadro (valor absoluto).
+    const k = `${mes}::inversion`;
+    const v = Number(promoEdit[k]) || 0;
+    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, inversion: v } } }));
+    setPromoEdit((p) => { const n = { ...p }; delete n[k]; return n; });
+    const { error } = await supabase.from("reporte_mensual").upsert({ mes, inversion: v, updated_at: new Date().toISOString() }, { onConflict: "mes" });
+    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
   }
   async function borrarLead(id) {
     if (!confirm("¿Borrar este lead?")) return;
@@ -839,7 +837,8 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const rows = keys.map((k) => ({ label: MED[k].label, cantidad: ult[k] || 0 }));
     const extra = (graf === "part" ? ult.extraPart : ult.extraCorp) || 0;
     if (extra) rows.push({ label: graf === "part" ? "Leads particulares" : "Leads corporativos", cantidad: extra });
-    return rows;
+    const conDatos = rows.filter((r) => r.cantidad > 0);
+    return conDatos.length ? conDatos : rows;
   }, [graf, ult]);
 
   const filtrados = useMemo(() => datos.leads.filter((l) => (fMes === "todos" || l.mes === fMes) && (fMed === "todos" || l.medio === fMed) && (fVend === "todos" || l.vendedor_id === fVend) && (fAsesor === "todos" || l.operador === fAsesor)), [datos.leads, fMes, fMed, fVend, fAsesor]);
@@ -879,14 +878,6 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
               <Kpi label="Cotizaciones" value={nf.format(cotizadasMes)} sub={`cotizadas · ${ult.label}`} accent={T.teal} />
               <Kpi label="Presupuestos corporativos" value={nf.format(ult.emailsDerivar || 0)} sub={ult.label} accent="#7c3aed" />
             </div>
-            <Card className="no-print" style={{ padding: 18 }}>
-              <div className="flex flex-wrap items-end gap-3">
-                <div style={{ flex: "1 1 160px" }}><Field label="Mes"><Select value={mesInv} onChange={setMesInv} options={MESES.map((m) => [m.key, m.label])} /></Field></div>
-                <div style={{ flex: "1 1 200px" }}><Field label="Inversión del mes (ARS)"><Txt value={montoInv} onChange={setMontoInv} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].inversion) || 0)} /></Field></div>
-                <button disabled={busy} onClick={guardarInversion} className="py-3 px-5" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar inversión</button>
-                {avisoInv && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoInv}</span>}
-              </div>
-            </Card>
             <Card style={{ padding: 18 }}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: 9, background: graf === "inv" ? T.teal : graf === "part" ? T.blue : T.gold, display: "inline-block" }} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{({ part: `Leads particulares · ${ult.label}`, corp: `Leads corporativos · ${ult.label}`, inv: "Inversión (por mes)", costo: "Costo por lead (por mes)" })[graf]}</span></div>
@@ -895,9 +886,15 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
               <div className="mt-3" style={{ width: "100%", height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   {graf === "part" || graf === "corp" ? (
-                    <BarChart data={desglose} margin={{ bottom: 10 }}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10.5, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} interval={0} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} allowDecimals={false} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Bar dataKey="cantidad" name="Leads" fill={graf === "part" ? T.blue : T.gold} radius={[4, 4, 0, 0]} maxBarSize={64} /></BarChart>
+                    <PieChart>
+                      <Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={105} paddingAngle={3} label={(e) => nf.format(e.cantidad)} stroke={T.card}>
+                        {desglose.map((_, i) => <Cell key={i} fill={[T.blue, T.teal, T.gold, T.green, "#7c3aed", "#db2777"][i % 6]} />)}
+                      </Pie>
+                    </PieChart>
                   ) : graf === "inv" ? (
-                    <BarChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1e6)}M`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Bar dataKey="inv" name="Inversión" fill={T.teal} radius={[4, 4, 0, 0]} /></BarChart>
+                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1e6)}M`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Line type="monotone" dataKey="inv" name="Inversión" stroke={T.teal} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
                   ) : (
                     <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1000)}k`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Legend wrapperStyle={{ fontSize: 11 }} /><Line type="monotone" dataKey="costo" name="Total" stroke={T.ink} strokeWidth={2.5} dot={{ r: 2 }} /><Line type="monotone" dataKey="costoPart" name="Particular" stroke={T.blue} strokeWidth={2} dot={{ r: 2 }} /><Line type="monotone" dataKey="costoCorp" name="Corporativo" stroke={T.gold} strokeWidth={2} dot={{ r: 2 }} /></LineChart>
                   )}
@@ -947,7 +944,21 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                         );
                       })}
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{nf.format(d.total)}</td>
-                      <td className="py-2 tabular-nums">{cf.format(d.inv)}</td>
+                      <td className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                        {d.historico ? <span className="tabular-nums">{cf.format(d.inv)}</span> : (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="number"
+                              value={promoEdit[`${d.key}::inversion`] ?? String(d.inv)}
+                              onChange={(e) => setPromoEdit({ ...promoEdit, [`${d.key}::inversion`]: e.target.value })}
+                              style={{ width: 110, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, textAlign: "right", outline: "none" }}
+                            />
+                            {promoEdit[`${d.key}::inversion`] != null && promoEdit[`${d.key}::inversion`] !== String(d.inv) && (
+                              <button onClick={() => guardarInv(d.key)} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
+                            )}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{cf.format(d.costo)}</td>
                       <td className="py-2 tabular-nums" style={{ color: T.blue, fontWeight: 600 }}>{cf.format(d.costoPart)}</td>
                       <td className="py-2 tabular-nums" style={{ color: T.gold, fontWeight: 600 }}>{cf.format(d.costoCorp)}</td>
