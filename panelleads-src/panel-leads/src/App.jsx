@@ -23,14 +23,15 @@ function exportarExcel({ leads, empresas, resumen, conVendedor, archivo }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(empRows), "Empresas activas");
   }
   if (resumen) {
-    const r = resumen.map((d) => ({
-      Mes: d.label,
-      Info: d.info, "Mail corpo": d.mail_corpo, "Waalaxy/FML": d.waalaxy_fml,
-      "Tablet part.": d.tablet_part, "Tablet corpo": d.tablet_corpo,
-      Corporativos: d.corp, Particulares: d.part, Total: d.total,
-      "Interac. CRM": d.crm, Inversión: d.inv,
-      "Costo total": d.costo, "Costo particular": d.costoPart, "Costo corpo": d.costoCorp,
-    }));
+    const r = resumen.map((d) => {
+      const row = { Mes: d.label };
+      MEDIOS.filter((c) => c.key !== "promoFinde").forEach((c) => (row[c.label] = d[c.key] ?? 0));
+      row["Leads corporativos"] = d.corp; row["Leads particulares"] = d.part;
+      row["Promo finde"] = d.promoFinde ?? 0; row.Total = d.total;
+      row["Inversión"] = d.inv ?? 0;
+      row["Costo por lead"] = d.costo ?? 0; row["Costo por lead particular"] = d.costoPart ?? 0; row["Costo por lead corpo"] = d.costoCorp ?? 0;
+      return row;
+    });
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r), "Resumen mensual");
   }
   XLSX.writeFile(wb, archivo);
@@ -54,11 +55,13 @@ const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helve
 
 // ── Medios (canal por el que se consiguió el lead) ───────────────────
 const MEDIOS = [
-  { key: "infoRenting",        label: "Info Renting",          grupo: "part", kw: ["info renting", "renting"] },
-  { key: "waalax",             label: "LinkedIn / Walaxy-FML", grupo: "corp", kw: ["linkedin seba", "linkedin", "seba", "walaxi/fml", "walaxi", "waalax", "walax", "fml"] },
-  { key: "empresasDarwin",     label: "Empresas Darwin",       grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
-  { key: "particularesDarwin", label: "Particulares Darwin",   grupo: "part", kw: ["particulares darwin", "particular darwin", "particulares", "darwin"] },
-  { key: "emailsDerivar",      label: "Emails Derivar (front)",grupo: "corp", kw: ["emails derivar", "email derivar", "derivar", "front"] },
+  { key: "leadsInfo",          label: "Leads particulares info", grupo: "part", kw: ["leads particulares info", "particulares info", "leads info"] },
+  { key: "infoRenting",        label: "info@renting",            grupo: "part", kw: ["info renting", "info@renting", "renting"] },
+  { key: "waalax",             label: "LinkedIn",                grupo: "corp", kw: ["linkedin seba", "linkedin", "seba", "walaxi/fml", "walaxi", "waalax", "walax", "fml"] },
+  { key: "particularesDarwin", label: "Darwin particulares",     grupo: "part", kw: ["particulares darwin", "darwin particulares", "particular darwin", "particulares", "darwin"] },
+  { key: "empresasDarwin",     label: "Empresas Darwin",         grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
+  { key: "emailsDerivar",      label: "Presupuestos corporativos", grupo: "corp", kw: ["presupuestos corporativos", "presupuesto corporativo", "emails derivar", "email derivar", "derivar", "front"] },
+  { key: "promoFinde",         label: "Promo finde",             grupo: "part", kw: ["promo finde", "promofinde", "promo", "finde"] },
 ];
 const MED = MEDIOS.reduce((a, c) => ((a[c.key] = c), a), {});
 const grupoDe = (k) => MED[k]?.grupo;
@@ -801,38 +804,24 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
     const inv = Number(r.inversion) || 0;
     // Meses anteriores al corte: se muestra el histórico viejo tal cual estaba
     // cargado (reporte_mensual). Desde el corte en adelante: leads reales.
-    if (m.key < CORTE_REAL) {
-      const part = Number(r.leads_part) || 0;
-      const corp = Number(r.leads_corp) || 0;
-      const total = part + corp;
-      const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
-      return {
-        key: m.key, label: m.label,
-        info: part, mail_corpo: 0, waalaxy_fml: corp, tablet_part: 0, tablet_corpo: 0,
-        part, corp, total, inv, crm: crmTotal, historico: true,
-        costo: total ? Math.round(inv / total) : 0,
-        costoPart: part ? Math.round(inv / part) : 0,
-        costoCorp: corp ? Math.round(inv / corp) : 0,
-      };
-    }
-    const mesLeads = datos.leads.filter((l) => l.mes === m.key);
-    const info       = mesLeads.filter((l) => l.medio === "infoRenting").length;
-    const tablet_part = mesLeads.filter((l) => l.medio === "particularesDarwin").length;
-    const mail_corpo  = mesLeads.filter((l) => l.medio === "emailsDerivar").length;
-    const waalaxy_fml = mesLeads.filter((l) => l.medio === "waalax").length;
-    const tablet_corpo = mesLeads.filter((l) => l.medio === "empresasDarwin").length;
-    const part = info + tablet_part;
-    const corp = mail_corpo + waalaxy_fml + tablet_corpo;
-    const total = part + corp;
     const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
-    return {
-      key: m.key, label: m.label,
-      info, mail_corpo, waalaxy_fml, tablet_part, tablet_corpo,
-      part, corp, total, inv, crm: crmTotal,
-      costo: total ? Math.round(inv / total) : 0,
-      costoPart: part ? Math.round(inv / part) : 0,
-      costoCorp: corp ? Math.round(inv / corp) : 0,
-    };
+    const o = { key: m.key, label: m.label, inv, crm: crmTotal };
+    if (m.key < CORTE_REAL) {
+      MEDIOS.forEach((c) => (o[c.key] = 0));
+      o.part = Number(r.leads_part) || 0;
+      o.corp = Number(r.leads_corp) || 0;
+      o.historico = true;
+    } else {
+      const mesLeads = datos.leads.filter((l) => l.mes === m.key);
+      MEDIOS.forEach((c) => (o[c.key] = mesLeads.filter((l) => l.medio === c.key).length));
+      o.part = PART_KEYS.reduce((a, k) => a + o[k], 0);
+      o.corp = CORP_KEYS.reduce((a, k) => a + o[k], 0);
+    }
+    o.total = o.part + o.corp;
+    o.costo = o.total ? Math.round(inv / o.total) : 0;
+    o.costoPart = o.part ? Math.round(inv / o.part) : 0;
+    o.costoCorp = o.corp ? Math.round(inv / o.corp) : 0;
+    return o;
   }), [datos]);
   const conMov = data.filter((d) => d.total > 0 || d.inv > 0);
   const ult = conMov[conMov.length - 1] || data[data.length - 1];
@@ -915,34 +904,26 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                 <thead>
                   <tr style={{ color: T.muted, textAlign: "right" }}>
                     <th className="py-2 text-left" style={{ fontWeight: 600 }}>Mes</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Info</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Mail corpo</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Waalaxy/FML</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Tablet part.</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Tablet corpo</th>
-                    <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Corporativos</th>
-                    <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Particulares</th>
+                    {MEDIOS.filter((c) => c.key !== "promoFinde").map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
+                    <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Leads corporativos</th>
+                    <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Leads particulares</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.teal }}>Promo finde</th>
                     <th className="py-2" style={{ fontWeight: 700 }}>Total</th>
-                    <th className="py-2" style={{ fontWeight: 600 }}>Interac. CRM</th>
                     <th className="py-2" style={{ fontWeight: 600 }}>Inversión</th>
-                    <th className="py-2" style={{ fontWeight: 700 }}>Costo total</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Costo part.</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Costo corpo</th>
+                    <th className="py-2" style={{ fontWeight: 700 }}>Costo por lead</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Costo por lead particular</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Costo por lead corpo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((d) => (
                     <tr key={d.key} style={{ borderTop: `1px solid ${T.line}`, textAlign: "right" }}>
                       <td className="py-2 text-left" style={{ fontWeight: 600 }}>{d.label}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.info)}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.mail_corpo)}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.waalaxy_fml)}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.tablet_part)}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.tablet_corpo)}</td>
+                      {MEDIOS.filter((c) => c.key !== "promoFinde").map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.gold }}>{nf.format(d.corp)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.blue }}>{nf.format(d.part)}</td>
+                      <td className="py-2 tabular-nums" style={{ color: T.teal, fontWeight: 600 }}>{nf.format(d.promoFinde)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{nf.format(d.total)}</td>
-                      <td className="py-2 tabular-nums">{nf.format(d.crm)}</td>
                       <td className="py-2 tabular-nums">{cf.format(d.inv)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{cf.format(d.costo)}</td>
                       <td className="py-2 tabular-nums" style={{ color: T.blue, fontWeight: 600 }}>{cf.format(d.costoPart)}</td>
