@@ -833,10 +833,10 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
   const cotizadasMes = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada && l.mes === ult.key ? 1 : 0), 0), [datos.leads, ult.key]);
   // Desglose por medio del mes elegido, para los gráficos de particulares/corporativos
   const desglose = useMemo(() => {
-    const keys = graf === "part" ? PART_KEYS : CORP_KEYS;
+    // Corporativos: solo info@renting, LinkedIn y Empresas Darwin (sin presupuestos ni ajuste)
+    const keys = graf === "part" ? PART_KEYS : CORP_KEYS.filter((k) => k !== "emailsDerivar");
     const rows = keys.map((k) => ({ label: MED[k].label, cantidad: ult[k] || 0 }));
-    const extra = (graf === "part" ? ult.extraPart : ult.extraCorp) || 0;
-    if (extra) rows.push({ label: graf === "part" ? "Leads particulares" : "Leads corporativos", cantidad: extra });
+    if (graf === "part" && ult.extraPart) rows.push({ label: "Leads particulares", cantidad: ult.extraPart });
     const conDatos = rows.filter((r) => r.cantidad > 0);
     return conDatos.length ? conDatos : rows;
   }, [graf, ult]);
@@ -888,8 +888,8 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                   {graf === "part" || graf === "corp" ? (
                     <PieChart>
                       <Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={105} paddingAngle={3} label={(e) => nf.format(e.cantidad)} stroke={T.card}>
+                      <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => <span style={{ color: T.ink }}>{v}</span>} />
+                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={105} paddingAngle={3} label={{ fill: T.ink, fontSize: 13, fontWeight: 600 }} stroke={T.card}>
                         {desglose.map((_, i) => <Cell key={i} fill={[T.blue, T.teal, T.gold, T.green, "#7c3aed", "#db2777"][i % 6]} />)}
                       </Pie>
                     </PieChart>
