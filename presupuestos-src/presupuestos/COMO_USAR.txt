@@ -1,0 +1,32 @@
+PRESUPUESTOS RENTING - HERTZ LA PLATA
+=====================================
+
+Esta es la aplicacion para armar presupuestos de alquiler de vehiculos y
+descargarlos en PDF con la plantilla de la empresa (formato del PowerPoint).
+
+--------------------------------------------------------------------
+COMO VERLA FUNCIONANDO (2 opciones)
+--------------------------------------------------------------------
+
+OPCION A - Rapida (ya viene compilada, carpeta "dist"):
+  1) Instala Node.js (https://nodejs.org) si no lo tenes.
+  2) Abri una terminal en esta carpeta.
+  3) Ejecuta:   npx serve dist
+  4) Abri en el navegador la direccion que te muestra (ej: http://localhost:3000)
+
+OPCION B - Modo desarrollo (para hacer cambios):
+  1) En una terminal, en esta carpeta, ejecuta:   npm install
+  2) Despues:   npm run dev
+  3) Abri http://localhost:5173
+
+--------------------------------------------------------------------
+COMO SE USA
+--------------------------------------------------------------------
+- "Nuevo presupuesto": elegis los vehiculos tocando su foto, las tarifas y
+  seguros vienen precargados y los podes cambiar. Toca "Generar PDF" y descarga.
+- "Catalogo y fotos": editas las tarifas base y SUBIS la foto de cada vehiculo.
+  Se guarda en la base compartida (Supabase) para todo el equipo.
+- "Configuracion": datos de la empresa que salen en la portada y pie del PDF.
+
+Los datos (catalogo, historial y fotos) se guardan en Supabase, asi que
+necesitas conexion a internet para que carguen los vehiculos.
