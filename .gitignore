@@ -4,3 +4,6 @@ node_modules/
 .env
 .env.local
 dist/
+
+# Electron build output
+release/
