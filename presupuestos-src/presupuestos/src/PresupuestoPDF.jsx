@@ -88,20 +88,22 @@ const s = StyleSheet.create({
   pieNota: { color: "#c9c9c9", fontSize: 6.8, lineHeight: 1.35 },
   pieContacto: { color: "#8f8f8f", fontSize: 6.8, textAlign: "right", lineHeight: 1.4 },
 
-  // ---- Portada (fondo negro) ----
-  portada: { flexGrow: 1, backgroundColor: NEGRO },
-  portadaLogoBand: { backgroundColor: AMARILLO, height: 78, justifyContent: "center", paddingHorizontal: 46 },
-  portadaLogo: { width: 150, height: 52, objectFit: "contain" },
-  portadaBody: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 46 },
-  portadaEyebrow: { color: AMARILLO, fontFamily: "Helvetica-Bold", fontSize: 13, letterSpacing: 4 },
-  portadaTitulo: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 40, lineHeight: 1.05, marginTop: 6 },
-  portadaBarra: { width: 90, height: 6, backgroundColor: AMARILLO, marginTop: 18, marginBottom: 18 },
-  portadaRazon: { color: GRIS_TXT, fontSize: 13 },
-  portadaMeta: { flexDirection: "row", marginTop: 20 },
-  metaLabel: { color: AMARILLO, fontSize: 8, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
-  metaValor: { color: BLANCO, fontSize: 13, marginTop: 3 },
-  portadaPie: { backgroundColor: AMARILLO, paddingHorizontal: 46, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between" },
-  portadaPieTxt: { color: NEGRO, fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  // ---- Portada (clara, estilo PowerPoint) ----
+  portada: { flexGrow: 1, backgroundColor: BLANCO, paddingHorizontal: 50, paddingTop: 54, paddingBottom: 40 },
+  portadaBarraDer: { position: "absolute", right: 0, top: 0, bottom: 0, width: 11, backgroundColor: AMARILLO },
+  portadaTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  portadaTitBlock: { flexShrink: 1, paddingRight: 24 },
+  portadaEyebrow: { color: "#8a8a8a", fontFamily: "Helvetica-Bold", fontSize: 13, letterSpacing: 5 },
+  portadaTitulo: { color: NEGRO, fontFamily: "Helvetica-Bold", fontSize: 33, lineHeight: 1.06, marginTop: 8 },
+  portadaBarra: { width: 84, height: 5, backgroundColor: AMARILLO, marginTop: 16 },
+  portadaLogoTop: { width: 158, height: 56, objectFit: "contain", marginTop: 4 },
+  portadaMeta: { flexDirection: "row", marginTop: 30 },
+  metaLabel: { color: "#9a9a9a", fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
+  metaValor: { color: NEGRO, fontSize: 14, marginTop: 3 },
+  portadaPie: { borderTopWidth: 1, borderTopColor: GRIS_LINEA, paddingTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+  portadaPieSuc: { color: NEGRO, fontFamily: "Helvetica-Bold", fontSize: 11, letterSpacing: 1 },
+  portadaPieVend: { color: "#6f6f6f", fontSize: 9, marginTop: 2 },
+  portadaPieTxt: { color: "#8a8a8a", fontSize: 9, textAlign: "right", lineHeight: 1.5 },
 
   // ---- Página institucional ----
   instBody: { flexGrow: 1, paddingHorizontal: 34, paddingTop: 12 },
@@ -206,33 +208,43 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
 export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, conIva, fecha }) {
   return (
     <Document title={`Presupuesto ${cliente || ""}`.trim()} author={empresa.razon}>
-      {/* Portada */}
+      {/* Portada (clara, estilo PowerPoint) */}
       <Page size={SLIDE} style={s.page}>
         <View style={s.portada}>
-          <View style={s.portadaLogoBand}>
-            <Image src={HERTZ_LOGO} style={s.portadaLogo} />
+          <View style={s.portadaBarraDer} />
+          <View style={s.portadaTop}>
+            <View style={s.portadaTitBlock}>
+              <Text style={s.portadaEyebrow}>PRESUPUESTO</Text>
+              <Text style={s.portadaTitulo}>Renting{"\n"}a largo plazo</Text>
+              <View style={s.portadaBarra} />
+            </View>
+            <Image src={HERTZ_LOGO} style={s.portadaLogoTop} />
           </View>
-          <View style={s.portadaBody}>
-            <Text style={s.portadaEyebrow}>PRESUPUESTO</Text>
-            <Text style={s.portadaTitulo}>RENTING{"\n"}A LARGO PLAZO</Text>
-            <View style={s.portadaBarra} />
-            <Text style={s.portadaRazon}>{empresa.razon}</Text>
-            <View style={s.portadaMeta}>
-              {cliente ? (
-                <View style={{ marginRight: 46 }}>
-                  <Text style={s.metaLabel}>PREPARADO PARA</Text>
-                  <Text style={s.metaValor}>{cliente}</Text>
-                </View>
-              ) : null}
-              <View>
-                <Text style={s.metaLabel}>FECHA</Text>
-                <Text style={s.metaValor}>{fecha}</Text>
+
+          <View style={s.portadaMeta}>
+            {cliente ? (
+              <View style={{ marginRight: 50 }}>
+                <Text style={s.metaLabel}>PREPARADO PARA</Text>
+                <Text style={s.metaValor}>{cliente}</Text>
               </View>
+            ) : null}
+            <View>
+              <Text style={s.metaLabel}>FECHA</Text>
+              <Text style={s.metaValor}>{fecha}</Text>
             </View>
           </View>
+
+          <View style={{ flexGrow: 1 }} />
+
           <View style={s.portadaPie}>
-            <Text style={s.portadaPieTxt}>{empresa.vendedor} · {empresa.email}</Text>
-            <Text style={s.portadaPieTxt}>{empresa.telefono} · {empresa.direccion}</Text>
+            <View>
+              <Text style={s.portadaPieSuc}>{empresa.razon}</Text>
+              <Text style={s.portadaPieVend}>{empresa.vendedor}</Text>
+            </View>
+            <View>
+              <Text style={s.portadaPieTxt}>{empresa.email} · {empresa.telefono}</Text>
+              <Text style={s.portadaPieTxt}>{empresa.direccion}</Text>
+            </View>
           </View>
         </View>
       </Page>
