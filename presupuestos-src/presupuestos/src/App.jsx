@@ -43,7 +43,7 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark">Hertz</span>
-          <span className="brand-sub">Presupuestos Renting · {empresa.sucursal}</span>
+          <span className="brand-sub">Cotizador Renting Corporativo</span>
         </div>
         <nav className="tabs">
           <button className={tab === "presupuesto" ? "on" : ""} onClick={() => setTab("presupuesto")}>
