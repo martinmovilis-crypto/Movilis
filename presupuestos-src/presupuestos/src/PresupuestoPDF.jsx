@@ -7,150 +7,143 @@ import {
   Image,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { HERTZ_LOGO, ICONOS } from "./fotos.js";
+import { HERTZ_LOGO } from "./fotos.js";
 import { INSTITUCIONAL, SERVICIOS, fotoDe, pesos, numero, IVA } from "./data.js";
 
-// Colores exactos del PowerPoint
+// Paleta con fuerza: negro + amarillo Hertz
 const AMARILLO = "#FFCC00";
-const NEGRO = "#1a1a1a";
-const GRIS = "#5f5f5f";
-const GRIS_CLARO = "#8a8a8a";
-const BORDE = "#dcdcdc";
+const NEGRO = "#141414";
+const CARBON = "#1c1c1c";
+const PANEL = "#191919";
+const GRIS_TXT = "#b4b4b4";
+const GRIS_LINEA = "#e2e2e2";
+const BLANCO = "#ffffff";
 
-// Tamaño de diapositiva 16:9 igual al PPT (10" x 5.625" = 720 x 405 pt)
+// Diapositiva 16:9 (10" x 5.625" = 720 x 405 pt), igual al PPT
 const SLIDE = [720, 405];
 
 const s = StyleSheet.create({
-  page: {
-    paddingTop: 16,
-    paddingHorizontal: 34,
-    paddingBottom: 14,
-    fontSize: 9,
-    color: NEGRO,
-    fontFamily: "Helvetica",
-  },
-  // ---- Encabezado de página de cotización ----
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  cotizTag: {
-    backgroundColor: AMARILLO,
-    color: NEGRO,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 15,
-    letterSpacing: 1,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-  },
-  headerRight: { alignItems: "flex-end" },
-  logo: { width: 92, height: 33, objectFit: "contain" },
-  sucursal: { fontSize: 9, color: GRIS, marginTop: 3, letterSpacing: 2 },
-  vehTitulo: { fontFamily: "Helvetica-Bold", fontSize: 20, marginTop: 8, marginBottom: 4 },
+  page: { fontSize: 9, color: NEGRO, fontFamily: "Helvetica", backgroundColor: BLANCO },
 
-  // ---- Cuerpo: columnas ----
-  cuerpo: { flexDirection: "row", height: 168 },
-  colIzq: { width: "37%", paddingRight: 12, justifyContent: "center" },
-  colDer: { width: "63%", alignItems: "center", justifyContent: "center" },
-  filaSpec: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  icono: { width: 15, height: 15, objectFit: "contain", marginRight: 9 },
-  puntoAmarillo: { width: 8, height: 8, borderRadius: 4, backgroundColor: AMARILLO, marginLeft: 4, marginRight: 12 },
-  specLabel: { fontSize: 10, color: "#333" },
-  foto: { maxWidth: "100%", maxHeight: 165, objectFit: "contain" },
+  // ---- Barra superior amarilla (full-bleed) ----
+  barra: {
+    backgroundColor: AMARILLO,
+    height: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 34,
+  },
+  barraTitulo: { fontFamily: "Helvetica-Bold", fontSize: 16, letterSpacing: 3, color: NEGRO },
+  barraDer: { flexDirection: "row", alignItems: "center" },
+  logo: { width: 84, height: 30, objectFit: "contain" },
+  barraSuc: {
+    marginLeft: 12,
+    paddingLeft: 12,
+    borderLeftWidth: 1.5,
+    borderLeftColor: "rgba(0,0,0,0.35)",
+    fontFamily: "Helvetica-Bold",
+    fontSize: 9,
+    letterSpacing: 1,
+    color: NEGRO,
+  },
+
+  // ---- Cuerpo cotización ----
+  cuerpo: { flexGrow: 1, paddingHorizontal: 34, paddingTop: 14 },
+  vehTitulo: { fontFamily: "Helvetica-Bold", fontSize: 23, color: NEGRO },
+  vehLinea: { width: 46, height: 4, backgroundColor: AMARILLO, marginTop: 5, marginBottom: 10 },
+  chips: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12 },
+  chip: {
+    backgroundColor: NEGRO,
+    color: BLANCO,
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 20,
+    marginRight: 6,
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
+
+  fila: { flexDirection: "row", flexGrow: 1 },
+  colFoto: { width: "54%", alignItems: "center", justifyContent: "center", paddingRight: 16 },
+  foto: { maxWidth: "100%", maxHeight: 178, objectFit: "contain" },
   fotoVacia: { color: "#c2c2c2", fontSize: 11 },
 
-  // ---- Tabla de precios ----
-  tabla: { borderWidth: 1, borderColor: AMARILLO, marginTop: 4 },
-  tablaHead: { flexDirection: "row", backgroundColor: AMARILLO },
-  th: {
-    flex: 1,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 9,
-    color: NEGRO,
-    paddingVertical: 5,
-    textAlign: "center",
-    borderRightWidth: 1,
-    borderRightColor: "#e6b800",
-  },
-  thLast: { borderRightWidth: 0 },
-  tablaRow: { flexDirection: "row" },
-  td: {
-    flex: 1,
-    paddingVertical: 6,
-    textAlign: "center",
-    borderRightWidth: 1,
-    borderRightColor: BORDE,
-    fontFamily: "Helvetica-Bold",
-    fontSize: 11,
-  },
-  tdLast: { borderRightWidth: 0 },
-  tdTarifa: { fontSize: 13 },
+  // ---- Panel de precio (oscuro, protagonista) ----
+  panel: { width: "46%", backgroundColor: PANEL, borderRadius: 12, padding: 18, justifyContent: "center" },
+  panelLabel: { color: AMARILLO, fontSize: 9, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
+  panelPrecio: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 34, marginTop: 2 },
+  panelSub: { color: GRIS_TXT, fontSize: 8, marginTop: 1 },
+  panelDiv: { height: 3, width: 40, backgroundColor: AMARILLO, marginVertical: 12 },
+  panelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 7 },
+  panelRowLabel: { color: GRIS_TXT, fontSize: 9 },
+  panelRowVal: { color: BLANCO, fontSize: 11, fontFamily: "Helvetica-Bold" },
 
-  // ---- Notas al pie ----
-  notas: { flexDirection: "row", marginTop: 7 },
-  notaCol: { flex: 1, paddingRight: 14 },
-  nota: { fontSize: 7, color: GRIS, marginBottom: 2, lineHeight: 1.3 },
-  ivaTag: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8,
-    color: NEGRO,
-    backgroundColor: AMARILLO,
-    alignSelf: "flex-start",
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    marginBottom: 3,
-  },
+  // ---- Pie negro (full-bleed) ----
+  pie: { backgroundColor: NEGRO, paddingHorizontal: 34, paddingVertical: 9, flexDirection: "row", justifyContent: "space-between" },
+  pieCol: { flexShrink: 1, paddingRight: 12 },
+  pieTag: { color: AMARILLO, fontFamily: "Helvetica-Bold", fontSize: 8, letterSpacing: 1, marginBottom: 3 },
+  pieNota: { color: "#c9c9c9", fontSize: 6.8, lineHeight: 1.35 },
+  pieContacto: { color: "#8f8f8f", fontSize: 6.8, textAlign: "right", lineHeight: 1.4 },
 
-  // ---- Portada ----
-  portada: { flexGrow: 1, paddingHorizontal: 20 },
-  portadaTop: { flexGrow: 1, justifyContent: "center" },
-  portadaLogo: { width: 210, height: 74, objectFit: "contain", marginBottom: 24 },
-  portadaTitulo: { fontFamily: "Helvetica-Bold", fontSize: 34, lineHeight: 1.1 },
-  portadaBarra: { width: 96, height: 6, backgroundColor: AMARILLO, marginVertical: 16 },
-  portadaRazon: { fontSize: 13, color: GRIS },
-  portadaMeta: { flexDirection: "row", marginTop: 16 },
-  metaLabel: { fontSize: 8, color: GRIS_CLARO, textTransform: "uppercase", letterSpacing: 1 },
-  metaValor: { fontSize: 12, marginTop: 2 },
-  contacto: {
-    borderTopWidth: 2,
-    borderTopColor: AMARILLO,
-    paddingTop: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  contactoTxt: { fontSize: 8.5, color: GRIS },
+  // ---- Portada (fondo negro) ----
+  portada: { flexGrow: 1, backgroundColor: NEGRO },
+  portadaLogoBand: { backgroundColor: AMARILLO, height: 78, justifyContent: "center", paddingHorizontal: 46 },
+  portadaLogo: { width: 150, height: 52, objectFit: "contain" },
+  portadaBody: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 46 },
+  portadaEyebrow: { color: AMARILLO, fontFamily: "Helvetica-Bold", fontSize: 13, letterSpacing: 4 },
+  portadaTitulo: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 40, lineHeight: 1.05, marginTop: 6 },
+  portadaBarra: { width: 90, height: 6, backgroundColor: AMARILLO, marginTop: 18, marginBottom: 18 },
+  portadaRazon: { color: GRIS_TXT, fontSize: 13 },
+  portadaMeta: { flexDirection: "row", marginTop: 20 },
+  metaLabel: { color: AMARILLO, fontSize: 8, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
+  metaValor: { color: BLANCO, fontSize: 13, marginTop: 3 },
+  portadaPie: { backgroundColor: AMARILLO, paddingHorizontal: 46, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between" },
+  portadaPieTxt: { color: NEGRO, fontSize: 8.5, fontFamily: "Helvetica-Bold" },
 
   // ---- Página institucional ----
-  instHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
-  instLogo: { width: 88, height: 31, objectFit: "contain" },
-  h2: { fontFamily: "Helvetica-Bold", fontSize: 15 },
-  parrafo: { fontSize: 10, lineHeight: 1.5, color: "#333", marginBottom: 14 },
+  instBody: { flexGrow: 1, paddingHorizontal: 34, paddingTop: 12 },
+  h2: { fontFamily: "Helvetica-Bold", fontSize: 15, color: NEGRO },
+  h2linea: { width: 40, height: 4, backgroundColor: AMARILLO, marginTop: 4, marginBottom: 8 },
+  parrafo: { fontSize: 9.5, lineHeight: 1.45, color: "#333", marginBottom: 12 },
   servGrid: { flexDirection: "row", flexWrap: "wrap" },
-  servItem: { width: "50%", flexDirection: "row", marginBottom: 10, paddingRight: 16 },
-  servBullet: { width: 7, height: 7, borderRadius: 4, backgroundColor: AMARILLO, marginTop: 3, marginRight: 8 },
-  servTit: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 1 },
-  servDesc: { fontSize: 8.5, color: GRIS, lineHeight: 1.4 },
+  servCard: {
+    width: "48%",
+    marginRight: "2%",
+    marginBottom: 7,
+    borderWidth: 1,
+    borderColor: GRIS_LINEA,
+    borderLeftWidth: 4,
+    borderLeftColor: AMARILLO,
+    borderRadius: 4,
+    padding: 8,
+  },
+  servTit: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 2, color: NEGRO },
+  servDesc: { fontSize: 8.5, color: "#666", lineHeight: 1.4 },
 });
 
-function CabeceraCotizacion({ empresa }) {
+function BarraSuperior({ empresa, titulo }) {
   return (
-    <View style={s.header}>
-      <Text style={s.cotizTag}>COTIZACIÓN</Text>
-      <View style={s.headerRight}>
+    <View style={s.barra}>
+      <Text style={s.barraTitulo}>{titulo}</Text>
+      <View style={s.barraDer}>
         <Image src={HERTZ_LOGO} style={s.logo} />
-        <Text style={s.sucursal}>{(empresa.sucursal || "La Plata").toUpperCase()}</Text>
+        <Text style={s.barraSuc}>{(empresa.sucursal || "La Plata").toUpperCase()}</Text>
       </View>
     </View>
   );
 }
 
-function filasSpec(v) {
-  const f = [];
-  if (v.aire_acondicionado) f.push([ICONOS.aire, "Aire acondicionado"]);
-  if (v.direccion_asistida) f.push([ICONOS.direccion, "Dirección asistida"]);
-  if (v.cierre_centralizado) f.push([ICONOS.cierre, "Cierre centralizado"]);
-  if (v.airbag) f.push([ICONOS.airbag, "Airbag"]);
-  f.push([ICONOS.personas, `${v.personas} personas`]);
-  f.push([ICONOS.transmision, v.transmision]);
-  if (v.traccion) f.push([null, v.traccion]);
-  return f;
+function chipsSpec(v) {
+  const c = [`${v.personas} PERSONAS`, v.transmision.toUpperCase()];
+  if (v.traccion) c.push(v.traccion.toUpperCase());
+  if (v.aire_acondicionado) c.push("AIRE ACOND.");
+  if (v.direccion_asistida) c.push("DIRECCIÓN ASISTIDA");
+  if (v.cierre_centralizado) c.push("CIERRE CENTRAL.");
+  if (v.airbag) c.push("AIRBAG");
+  return c;
 }
 
 function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
@@ -158,52 +151,52 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
   const factor = conIva ? 1 + IVA : 1;
   return (
     <Page size={SLIDE} style={s.page}>
-      <CabeceraCotizacion empresa={empresa} />
-      <Text style={s.vehTitulo}>{v.nombre}</Text>
+      <BarraSuperior empresa={empresa} titulo="COTIZACIÓN" />
 
       <View style={s.cuerpo}>
-        <View style={s.colIzq}>
-          {filasSpec(v).map(([icono, label], i) => (
-            <View key={i} style={s.filaSpec}>
-              {icono ? <Image src={icono} style={s.icono} /> : <View style={s.puntoAmarillo} />}
-              <Text style={s.specLabel}>{label}</Text>
-            </View>
+        <Text style={s.vehTitulo}>{v.nombre}</Text>
+        <View style={s.vehLinea} />
+        <View style={s.chips}>
+          {chipsSpec(v).map((c, i) => (
+            <Text key={i} style={s.chip}>{c}</Text>
           ))}
         </View>
-        <View style={s.colDer}>
-          {foto ? <Image src={foto} style={s.foto} /> : <Text style={s.fotoVacia}>Sin foto cargada</Text>}
+
+        <View style={s.fila}>
+          <View style={s.colFoto}>
+            {foto ? <Image src={foto} style={s.foto} /> : <Text style={s.fotoVacia}>Sin foto cargada</Text>}
+          </View>
+
+          <View style={s.panel}>
+            <Text style={s.panelLabel}>TARIFA MENSUAL</Text>
+            <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
+            <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido" : "+ IVA · reajuste trimestral"}</Text>
+            <View style={s.panelDiv} />
+            <View style={s.panelRow}>
+              <Text style={s.panelRowLabel}>Kilómetros por mes</Text>
+              <Text style={s.panelRowVal}>{numero(v.km_mensuales)} KM</Text>
+            </View>
+            <View style={s.panelRow}>
+              <Text style={s.panelRowLabel}>Franquicia por daño</Text>
+              <Text style={s.panelRowVal}>{pesos(v.franquicia_dano * factor)}</Text>
+            </View>
+            <View style={[s.panelRow, { marginBottom: 0 }]}>
+              <Text style={s.panelRowLabel}>Franquicia por vuelco</Text>
+              <Text style={s.panelRowVal}>{pesos(v.franquicia_vuelco * factor)}</Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      <View style={s.tabla}>
-        <View style={s.tablaHead}>
-          <Text style={s.th}>Km mensuales</Text>
-          <Text style={s.th}>Tarifa mensual</Text>
-          <Text style={s.th}>Franquicia Daño</Text>
-          <Text style={[s.th, s.thLast]}>Franquicia vuelco</Text>
+      <View style={s.pie}>
+        <View style={s.pieCol}>
+          <Text style={s.pieTag}>{conIva ? "PRECIOS CON IVA (21%)" : "PRECIOS SIN IVA"}</Text>
+          <Text style={s.pieNota}>Cobertura contra todo riesgo con franquicia · Desgaste de cubierta por uso (60.000 km) · Mantenimiento cada 10.000 km · Asistencia en viaje 24 h.</Text>
+          <Text style={s.pieNota}>Cotización válida por {vigencia} días desde su emisión.</Text>
         </View>
-        <View style={s.tablaRow}>
-          <Text style={s.td}>{numero(v.km_mensuales)} KM</Text>
-          <Text style={[s.td, s.tdTarifa]}>{pesos(v.tarifa_mensual * factor)}</Text>
-          <Text style={s.td}>{pesos(v.franquicia_dano * factor)}</Text>
-          <Text style={[s.td, s.tdLast]}>{pesos(v.franquicia_vuelco * factor)}</Text>
-        </View>
-      </View>
-
-      <View style={s.notas}>
-        <View style={s.notaCol}>
-          <Text style={s.ivaTag}>{conIva ? "PRECIOS CON IVA (21%)" : "PRECIOS SIN IVA"}</Text>
-          <Text style={s.nota}>· Cobertura contra todo riesgo con franquicia.</Text>
-          <Text style={s.nota}>· Desgaste de cubierta por uso (60.000 km).</Text>
-          <Text style={s.nota}>· Mantenimiento preventivo cada 10.000 km.</Text>
-        </View>
-        <View style={s.notaCol}>
-          <Text style={s.nota}>· Asistencia en viaje las 24 horas.</Text>
-          <Text style={s.nota}>· Una vez iniciado el contrato, las tarifas tienen un reajuste trimestral.</Text>
-          <Text style={s.nota}>· La presente cotización tiene una vigencia de {vigencia} días.</Text>
-          <Text style={[s.nota, { marginTop: 3, color: GRIS_CLARO }]}>
-            {empresa.email} · {empresa.telefono}
-          </Text>
+        <View>
+          <Text style={s.pieContacto}>{empresa.vendedor} · {empresa.email}</Text>
+          <Text style={s.pieContacto}>{empresa.telefono} · {empresa.direccion}</Text>
         </View>
       </View>
     </Page>
@@ -216,53 +209,51 @@ export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, 
       {/* Portada */}
       <Page size={SLIDE} style={s.page}>
         <View style={s.portada}>
-          <View style={s.portadaTop}>
+          <View style={s.portadaLogoBand}>
             <Image src={HERTZ_LOGO} style={s.portadaLogo} />
-            <Text style={s.portadaTitulo}>PRESUPUESTO{"\n"}RENTING A LARGO PLAZO</Text>
+          </View>
+          <View style={s.portadaBody}>
+            <Text style={s.portadaEyebrow}>PRESUPUESTO</Text>
+            <Text style={s.portadaTitulo}>RENTING{"\n"}A LARGO PLAZO</Text>
             <View style={s.portadaBarra} />
             <Text style={s.portadaRazon}>{empresa.razon}</Text>
             <View style={s.portadaMeta}>
               {cliente ? (
-                <View style={{ marginRight: 40 }}>
-                  <Text style={s.metaLabel}>Preparado para</Text>
+                <View style={{ marginRight: 46 }}>
+                  <Text style={s.metaLabel}>PREPARADO PARA</Text>
                   <Text style={s.metaValor}>{cliente}</Text>
                 </View>
               ) : null}
               <View>
-                <Text style={s.metaLabel}>Fecha</Text>
+                <Text style={s.metaLabel}>FECHA</Text>
                 <Text style={s.metaValor}>{fecha}</Text>
               </View>
             </View>
           </View>
-          <View style={s.contacto}>
-            <Text style={s.contactoTxt}>
-              {empresa.vendedor} · {empresa.email}
-            </Text>
-            <Text style={s.contactoTxt}>
-              {empresa.telefono} · {empresa.direccion}
-            </Text>
+          <View style={s.portadaPie}>
+            <Text style={s.portadaPieTxt}>{empresa.vendedor} · {empresa.email}</Text>
+            <Text style={s.portadaPieTxt}>{empresa.telefono} · {empresa.direccion}</Text>
           </View>
         </View>
       </Page>
 
       {/* Institucional + servicios */}
       <Page size={SLIDE} style={s.page}>
-        <View style={s.instHead}>
+        <BarraSuperior empresa={empresa} titulo="RENTING CORPORATIVO" />
+        <View style={s.instBody}>
           <Text style={s.h2}>Sobre nosotros</Text>
-          <Image src={HERTZ_LOGO} style={s.instLogo} />
-        </View>
-        <Text style={s.parrafo}>{INSTITUCIONAL}</Text>
-        <Text style={[s.h2, { marginBottom: 12 }]}>Servicios incluidos</Text>
-        <View style={s.servGrid}>
-          {SERVICIOS.map((sv, i) => (
-            <View key={i} style={s.servItem}>
-              <View style={s.servBullet} />
-              <View style={{ flex: 1 }}>
+          <View style={s.h2linea} />
+          <Text style={s.parrafo}>{INSTITUCIONAL}</Text>
+          <Text style={s.h2}>Servicios incluidos</Text>
+          <View style={s.h2linea} />
+          <View style={s.servGrid} wrap={false}>
+            {SERVICIOS.map((sv, i) => (
+              <View key={i} style={s.servCard}>
                 <Text style={s.servTit}>{sv.titulo}</Text>
                 <Text style={s.servDesc}>{sv.desc}</Text>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
       </Page>
 
