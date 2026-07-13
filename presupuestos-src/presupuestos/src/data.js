@@ -80,6 +80,10 @@ export function slugify(nombre) {
 
 export function fotoDe(vehiculo) {
   if (vehiculo?.foto_url) return vehiculo.foto_url;
+  // Clave estable de foto: no cambia aunque se renombre el vehículo.
+  if (vehiculo?.foto_slug && FOTOS_DEFAULT[vehiculo.foto_slug]) {
+    return FOTOS_DEFAULT[vehiculo.foto_slug];
+  }
   return FOTOS_DEFAULT[slugify(vehiculo?.nombre)] || null;
 }
 
@@ -113,6 +117,7 @@ export function vehiculoNuevo() {
     franquicia_dano: 0,
     franquicia_vuelco: 0,
     foto_url: "",
+    foto_slug: "",
     activo: true,
   };
 }

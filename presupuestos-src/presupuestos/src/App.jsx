@@ -345,6 +345,9 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
       franquicia_dano: Number(v.franquicia_dano) || 0,
       franquicia_vuelco: Number(v.franquicia_vuelco) || 0,
       foto_url: v.foto_url || null,
+      // Clave de foto estable: se fija una vez y no cambia al renombrar,
+      // así el vehículo no pierde su foto por defecto al editar el nombre.
+      foto_slug: v.foto_slug || slugify(v.nombre) || null,
       activo: true,
     };
     let error;
