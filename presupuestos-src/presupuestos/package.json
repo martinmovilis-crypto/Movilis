@@ -6,12 +6,16 @@
   "author": "Grupo Randazzo",
   "type": "module",
   "main": "electron/main.cjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martinmovilis-crypto/Movilis.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron .",
-    "dist:win": "vite build && electron-builder --win"
+    "dist:win": "vite build && electron-builder --win --publish never"
   },
   "dependencies": {
     "@react-pdf/renderer": "^3.4.5",
