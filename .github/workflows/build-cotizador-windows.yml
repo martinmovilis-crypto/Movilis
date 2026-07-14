@@ -8,6 +8,9 @@ on:
       - "presupuestos-src/presupuestos/**"
       - ".github/workflows/build-cotizador-windows.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -26,12 +29,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Windows installer (.exe)
+      - name: Build Windows portable (.exe)
         run: npm run dist:win
 
-      - name: Upload installer
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Cotizador-Renting-Corporativo-Windows
           path: presupuestos-src/presupuestos/release/*.exe
           if-no-files-found: error
+
+      - name: Publish download (Release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete cotizador-latest -y --cleanup-tag || echo "no previous release"
+          gh release create cotizador-latest release/*.exe --title "Cotizador Renting Corporativo (portable)" --notes "Programa portable para Windows. No requiere instalacion: descargar y doble clic."

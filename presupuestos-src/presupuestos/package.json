@@ -46,7 +46,7 @@
       "icon": "build/icon.ico"
     },
     "portable": {
-      "artifactName": "Cotizador Renting Corporativo ${version}.${ext}"
+      "artifactName": "Cotizador-Renting-Corporativo.${ext}"
     },
     "nsis": {
       "oneClick": false,
