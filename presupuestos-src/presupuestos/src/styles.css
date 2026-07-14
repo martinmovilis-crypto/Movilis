@@ -184,11 +184,10 @@ body {
 .file-btn { cursor: pointer; }
 
 /* Preview */
-.preview-card { position: sticky; top: 74px; }
 .preview-head { display: flex; align-items: center; justify-content: space-between; }
-.pdf-viewer { width: 100%; height: 78vh; border: 1px solid var(--borde); border-radius: 10px; }
+.pdf-viewer { width: 100%; height: 58vh; border: 1px solid var(--borde); border-radius: 10px; }
 .preview-empty {
-  height: 78vh; border: 2px dashed var(--borde); border-radius: 10px;
+  height: 300px; border: 2px dashed var(--borde); border-radius: 10px;
   display: flex; align-items: center; justify-content: center; text-align: center;
   color: var(--gris); padding: 30px;
 }
