@@ -48,6 +48,40 @@ function convertirAJpeg(file, maxW = 1100, quality = 0.82) {
   });
 }
 
+// Carga una imagen (URL remota o data URI) y la devuelve como data URI JPEG.
+// El PDF sólo dibuja JPEG/PNG y no baja imágenes remotas de forma confiable:
+// por eso, al generar, incrustamos cada foto ya convertida. El navegador sí
+// sabe decodificar AVIF/WebP, así que esto arregla también las fotos viejas.
+function urlAJpegDataUri(url, maxW = 1000, quality = 0.82) {
+  return new Promise((resolve) => {
+    if (!url) return resolve(null);
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const escala = Math.min(1, maxW / img.width || 1);
+        const w = Math.max(1, Math.round(img.width * escala));
+        const h = Math.max(1, Math.round(img.height * escala));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    // Cache-buster: fuerza una descarga "con CORS" y evita reutilizar una
+    // respuesta cacheada sin cabeceras CORS (que ensuciaría el canvas).
+    const sep = url.includes("?") ? "&" : "?";
+    img.src = url + sep + "cbpdf=" + Date.now();
+  });
+}
+
 export default function App() {
   const [tab, setTab] = useState("presupuesto");
   const [empresa, setEmpresa] = useState(cargarEmpresa());
@@ -127,6 +161,7 @@ function TabPresupuesto({ empresa, catalogo }) {
   const [conIva, setConIva] = useState(false);
   const [seleccion, setSeleccion] = useState([]); // copias editables
   const [docProps, setDocProps] = useState(null);
+  const [generando, setGenerando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -146,16 +181,31 @@ function TabPresupuesto({ empresa, catalogo }) {
     setSeleccion((s) => s.map((v) => (v.id === id ? { ...v, [campo]: valor } : v)));
   }
 
-  function generar() {
+  async function generar() {
+    setGenerando(true);
+    setDocProps(null);
     const orden = [...seleccion].sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    // Incrustamos cada foto ya convertida a JPEG (data URI) para que el PDF
+    // la muestre siempre, sin importar el formato (AVIF/WebP) ni el origen.
+    const vehiculos = await Promise.all(
+      orden.map(async (v) => {
+        const src = fotoDe(v);
+        if (src && /^https?:/i.test(src)) {
+          const dataUri = await urlAJpegDataUri(src);
+          return { ...v, foto_url: dataUri };
+        }
+        return { ...v }; // ya es data URI (default embebido) o sin foto
+      })
+    );
     setDocProps({
       empresa,
       cliente,
-      vehiculos: orden,
+      vehiculos,
       vigencia: Number(vigencia) || 10,
       conIva,
       fecha,
     });
+    setGenerando(false);
   }
 
   async function guardar() {
@@ -245,7 +295,9 @@ function TabPresupuesto({ empresa, catalogo }) {
                 </div>
               ))}
             <div className="acciones">
-              <button className="btn primary" onClick={generar}>Generar PDF</button>
+              <button className="btn primary" onClick={generar} disabled={generando}>
+                {generando ? "Generando…" : "Generar PDF"}
+              </button>
               <button className="btn ghost" onClick={guardar} disabled={guardando}>
                 {guardando ? "Guardando…" : "Guardar en historial"}
               </button>
