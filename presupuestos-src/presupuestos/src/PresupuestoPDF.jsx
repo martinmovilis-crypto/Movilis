@@ -66,20 +66,20 @@ const s = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  fila: { flexDirection: "row", flexGrow: 1 },
-  colFoto: { width: "54%", alignItems: "center", justifyContent: "center", paddingRight: 16 },
+  fila: { flexDirection: "row", flexGrow: 1, alignItems: "center" },
+  colFoto: { width: "60%", alignItems: "center", justifyContent: "center", paddingRight: 16 },
   foto: { maxWidth: "100%", maxHeight: 178, objectFit: "contain" },
   fotoVacia: { color: "#c2c2c2", fontSize: 11 },
 
   // ---- Panel de precio (oscuro, protagonista) ----
-  panel: { width: "46%", backgroundColor: PANEL, borderRadius: 12, padding: 18, justifyContent: "center" },
-  panelLabel: { color: AMARILLO, fontSize: 9, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
-  panelPrecio: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 34, marginTop: 2 },
-  panelSub: { color: GRIS_TXT, fontSize: 8, marginTop: 1 },
-  panelDiv: { height: 3, width: 40, backgroundColor: AMARILLO, marginVertical: 12 },
-  panelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 7 },
-  panelRowLabel: { color: GRIS_TXT, fontSize: 9 },
-  panelRowVal: { color: BLANCO, fontSize: 11, fontFamily: "Helvetica-Bold" },
+  panel: { width: "40%", backgroundColor: PANEL, borderRadius: 10, padding: 14, justifyContent: "center" },
+  panelLabel: { color: AMARILLO, fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
+  panelPrecio: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 27, marginTop: 2 },
+  panelSub: { color: GRIS_TXT, fontSize: 7.5, marginTop: 1 },
+  panelDiv: { height: 3, width: 34, backgroundColor: AMARILLO, marginVertical: 9 },
+  panelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  panelRowLabel: { color: GRIS_TXT, fontSize: 8.5 },
+  panelRowVal: { color: BLANCO, fontSize: 10, fontFamily: "Helvetica-Bold" },
 
   // ---- Pie negro (full-bleed) ----
   pie: { backgroundColor: NEGRO, paddingHorizontal: 34, paddingVertical: 9, flexDirection: "row", justifyContent: "space-between" },

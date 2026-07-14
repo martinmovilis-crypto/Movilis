@@ -129,6 +129,12 @@ body {
 .veh-foto.lg { height: 150px; }
 .veh-foto img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .veh-noimg { color: #bbb; font-size: 12px; }
+.veh-cat {
+  position: absolute; top: 6px; left: 6px;
+  background: var(--negro); color: var(--amarillo);
+  font-weight: 800; font-size: 11px;
+  padding: 2px 7px; border-radius: 6px; letter-spacing: .5px;
+}
 .veh-check {
   position: absolute; top: 6px; right: 6px;
   background: var(--amarillo); color: var(--negro);

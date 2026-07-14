@@ -101,9 +101,15 @@ export function numero(n) {
 export const IVA = 0.21;
 
 // Vehículo nuevo por defecto para el catálogo
+// Categorías de la tarifa (según la tabla interna). Editable en el catálogo.
+export const CATEGORIAS = [
+  "C", "H", "H1", "K", "K1", "Z", "N1", "M", "S", "L", "J", "U1", "U2", "U3", "U4",
+];
+
 export function vehiculoNuevo() {
   return {
     nombre: "",
+    categoria: "",
     orden: 99,
     personas: 5,
     transmision: "Manual",

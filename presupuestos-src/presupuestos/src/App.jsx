@@ -6,6 +6,7 @@ import {
   cargarEmpresa,
   guardarEmpresa,
   EMPRESA_DEFAULT,
+  CATEGORIAS,
   fotoDe,
   slugify,
   pesos,
@@ -15,6 +16,38 @@ import {
 const hoy = () =>
   new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
 
+// Convierte cualquier imagen (incluido AVIF/WebP) a un Blob JPEG, redimensionada.
+// El PDF sólo admite JPEG/PNG, así que unificamos todo a JPEG.
+function convertirAJpeg(file, maxW = 1100, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const escala = Math.min(1, maxW / img.width || 1);
+        const w = Math.max(1, Math.round(img.width * escala));
+        const h = Math.max(1, Math.round(img.height * escala));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("encode"))),
+          "image/jpeg",
+          quality
+        );
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function App() {
   const [tab, setTab] = useState("presupuesto");
   const [empresa, setEmpresa] = useState(cargarEmpresa());
@@ -22,8 +55,9 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
 
+  // No togglear "cargando" en refrescos: eso desmontaría las solapas y se
+  // perdería el presupuesto en curso. Sólo la carga inicial muestra el loader.
   async function refrescarCatalogo() {
-    setCargando(true);
     const { data, error } = await supabase
       .from("renting_vehiculos")
       .select("*")
@@ -63,12 +97,20 @@ export default function App() {
       <main className="main">
         {cargando ? (
           <div className="loading">Cargando catálogo…</div>
-        ) : tab === "presupuesto" ? (
-          <TabPresupuesto empresa={empresa} catalogo={catalogo} />
-        ) : tab === "catalogo" ? (
-          <TabCatalogo catalogo={catalogo} onCambio={refrescarCatalogo} />
         ) : (
-          <TabConfig empresa={empresa} setEmpresa={setEmpresa} />
+          <>
+            {/* Las 3 solapas quedan montadas y se muestran/ocultan: así el
+                presupuesto en curso no se pierde al cambiar de solapa. */}
+            <div style={{ display: tab === "presupuesto" ? "block" : "none" }}>
+              <TabPresupuesto empresa={empresa} catalogo={catalogo} />
+            </div>
+            <div style={{ display: tab === "catalogo" ? "block" : "none" }}>
+              <TabCatalogo catalogo={catalogo} onCambio={refrescarCatalogo} />
+            </div>
+            <div style={{ display: tab === "config" ? "block" : "none" }}>
+              <TabConfig empresa={empresa} setEmpresa={setEmpresa} />
+            </div>
+          </>
         )}
       </main>
     </div>
@@ -172,6 +214,7 @@ function TabPresupuesto({ empresa, catalogo }) {
                 <button key={v.id} className={"veh-card" + (activo ? " sel" : "")} onClick={() => toggle(v)} type="button">
                   <div className="veh-foto">
                     {foto ? <img src={foto} alt={v.nombre} /> : <div className="veh-noimg">Sin foto</div>}
+                    {v.categoria ? <span className="veh-cat">{v.categoria}</span> : null}
                     {activo ? <span className="veh-check">✓</span> : null}
                   </div>
                   <div className="veh-nombre">{v.nombre}</div>
@@ -306,12 +349,21 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
     if (!file) return;
     setSubiendo(true);
     setMsg("");
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    let blob;
+    try {
+      // Convertimos siempre a JPEG: el PDF (y algunos navegadores) no soportan
+      // AVIF/WebP. Así toda foto queda en un formato universal.
+      blob = await convertirAJpeg(file);
+    } catch (e) {
+      setSubiendo(false);
+      setMsg("No se pudo procesar la imagen. Probá con otra.");
+      return;
+    }
     const base = slugify(v.nombre || "vehiculo") || "vehiculo";
-    const path = `${base}-${Date.now()}.${ext}`;
+    const path = `${base}-${Date.now()}.jpg`;
     const { error: upErr } = await supabase.storage
       .from(BUCKET_FOTOS)
-      .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+      .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
     if (upErr) {
       setSubiendo(false);
       setMsg("Error al subir: " + upErr.message);
@@ -332,6 +384,7 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
     setMsg("");
     const payload = {
       nombre: v.nombre.trim(),
+      categoria: (v.categoria || "").trim() || null,
       orden: Number(v.orden) || 0,
       personas: Number(v.personas) || 0,
       transmision: v.transmision,
@@ -392,10 +445,24 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
               <input value={v.nombre} onChange={(e) => set("nombre", e.target.value)} placeholder="Ej: Renault Kwid" />
             </label>
             <label className="fld sm-fld">
+              <span>Categoría</span>
+              <input
+                list="categorias-list"
+                value={v.categoria || ""}
+                onChange={(e) => set("categoria", e.target.value.toUpperCase())}
+                placeholder="Ej: M, S, J…"
+              />
+            </label>
+            <label className="fld sm-fld">
               <span>Orden</span>
               <input type="number" value={v.orden} onChange={(e) => set("orden", e.target.value)} />
             </label>
           </div>
+          <datalist id="categorias-list">
+            {CATEGORIAS.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
 
           <div className="row">
             <label className="fld sm-fld">
