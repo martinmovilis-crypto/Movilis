@@ -278,14 +278,63 @@ function TabPresupuesto({ empresa, catalogo }) {
 
         {seleccion.length > 0 && (
           <div className="card">
-            <h3>Tarifas y seguros</h3>
-            <p className="muted small">Los valores vienen precargados. Cambialos si necesitás; solo afectan a este presupuesto.</p>
+            <h3>Datos, tarifas y seguros</h3>
+            <p className="muted small">Podés editar todo (categoría, datos y precios). Los cambios son solo para este presupuesto, no tocan el catálogo.</p>
+            <datalist id="cat-list-pres">
+              {CATEGORIAS.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
             {seleccion
               .slice()
               .sort((a, b) => (a.orden || 0) - (b.orden || 0))
               .map((v) => (
                 <div key={v.id} className="item-edit">
-                  <div className="item-head">{v.nombre}</div>
+                  <div className="item-head-row">
+                    <input
+                      className="item-nombre"
+                      value={v.nombre}
+                      onChange={(e) => editar(v.id, "nombre", e.target.value)}
+                    />
+                    <input
+                      className="item-cat"
+                      list="cat-list-pres"
+                      value={v.categoria || ""}
+                      onChange={(e) => editar(v.id, "categoria", e.target.value.toUpperCase())}
+                      placeholder="Cat"
+                      title="Categoría"
+                    />
+                  </div>
+                  <div className="row item-specs">
+                    <label className="fld sm-fld">
+                      <span>Personas</span>
+                      <input type="number" value={v.personas} onChange={(e) => editar(v.id, "personas", Number(e.target.value) || 0)} />
+                    </label>
+                    <label className="fld">
+                      <span>Transmisión</span>
+                      <select value={v.transmision} onChange={(e) => editar(v.id, "transmision", e.target.value)}>
+                        <option>Manual</option>
+                        <option>Automática</option>
+                      </select>
+                    </label>
+                    <label className="fld">
+                      <span>Tracción</span>
+                      <input value={v.traccion || ""} onChange={(e) => editar(v.id, "traccion", e.target.value)} placeholder="4x4 (opcional)" />
+                    </label>
+                  </div>
+                  <div className="chips-check">
+                    {[
+                      ["aire_acondicionado", "Aire acondicionado"],
+                      ["direccion_asistida", "Dirección asistida"],
+                      ["cierre_centralizado", "Cierre centralizado"],
+                      ["airbag", "Airbag"],
+                    ].map(([k, lbl]) => (
+                      <label key={k} className={"chip-check" + (v[k] ? " on" : "")}>
+                        <input type="checkbox" checked={!!v[k]} onChange={(e) => editar(v.id, k, e.target.checked)} />
+                        {lbl}
+                      </label>
+                    ))}
+                  </div>
                   <div className="item-grid">
                     <NumFld label="Km mensuales" val={v.km_mensuales} on={(n) => editar(v.id, "km_mensuales", n)} />
                     <NumFld label="Tarifa mensual" val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
