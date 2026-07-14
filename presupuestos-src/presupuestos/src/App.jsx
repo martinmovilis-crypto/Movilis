@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PDFViewer, PDFDownloadLink } from "@react-pdf/renderer";
+import { PDFViewer, pdf } from "@react-pdf/renderer";
 import { supabase, BUCKET_FOTOS } from "./supabaseClient.js";
 import PresupuestoPDF from "./PresupuestoPDF.jsx";
 import {
@@ -16,6 +16,26 @@ import {
 
 const hoy = () =>
   new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
+
+const fmtFecha = (iso) => {
+  try {
+    return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch {
+    return "";
+  }
+};
+
+// Dispara la descarga de un Blob como archivo.
+function bajarBlob(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
 
 // Convierte cualquier imagen (incluido AVIF/WebP) a un Blob JPEG, redimensionada.
 // El PDF sólo admite JPEG/PNG, así que unificamos todo a JPEG.
@@ -163,10 +183,55 @@ function TabPresupuesto({ empresa, catalogo }) {
   const [seleccion, setSeleccion] = useState([]); // copias editables
   const [docProps, setDocProps] = useState(null);
   const [generando, setGenerando] = useState(false);
-  const [guardando, setGuardando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
   const [msg, setMsg] = useState("");
+  const [historial, setHistorial] = useState([]);
+  const [descargandoId, setDescargandoId] = useState(null);
 
   const idsSel = seleccion.map((v) => v.id);
+
+  async function cargarHistorial() {
+    const { data } = await supabase
+      .from("renting_presupuestos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setHistorial(data || []);
+  }
+
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
+
+  async function descargarHistorial(rec) {
+    setDescargandoId(rec.id);
+    try {
+      const items = Array.isArray(rec.items) ? rec.items : [];
+      const vehiculos = await Promise.all(
+        items.map(async (v) => {
+          const src = fotoDe(v);
+          if (src && /^https?:/i.test(src)) return { ...v, foto_url: await urlAJpegDataUri(src) };
+          return { ...v };
+        })
+      );
+      const doc = (
+        <PresupuestoPDF
+          empresa={empresa}
+          cliente={rec.cliente || ""}
+          vehiculos={vehiculos}
+          vigencia={rec.vigencia_dias || 10}
+          conIva={!!rec.incluye_iva}
+          fecha={rec.fecha_texto || fmtFecha(rec.created_at)}
+        />
+      );
+      const blob = await pdf(doc).toBlob();
+      bajarBlob(blob, "Presupuesto" + (rec.cliente ? " - " + rec.cliente : "") + ".pdf");
+    } catch (e) {
+      /* ignore */
+    } finally {
+      setDescargandoId(null);
+    }
+  }
 
   function toggle(v) {
     setDocProps(null);
@@ -209,29 +274,58 @@ function TabPresupuesto({ empresa, catalogo }) {
     setGenerando(false);
   }
 
-  async function guardar() {
-    setGuardando(true);
-    setMsg("");
-    const { error } = await supabase.from("renting_presupuestos").insert({
-      cliente,
-      vendedor: empresa.vendedor,
-      sucursal: empresa.sucursal,
-      vigencia_dias: Number(vigencia) || 10,
-      incluye_iva: conIva,
-      items: seleccion.map((v) => ({
-        nombre: v.nombre,
-        km_mensuales: v.km_mensuales,
-        tarifa_mensual: v.tarifa_mensual,
-        franquicia_dano: v.franquicia_dano,
-        franquicia_vuelco: v.franquicia_vuelco,
-      })),
-    });
-    setGuardando(false);
-    setMsg(error ? "Error al guardar: " + error.message : "Presupuesto guardado ✓");
+  // Registra la descarga en el historial (últimas cotizaciones).
+  async function registrarDescarga() {
+    try {
+      await supabase.from("renting_presupuestos").insert({
+        cliente,
+        vendedor: empresa.vendedor,
+        sucursal: empresa.sucursal,
+        vigencia_dias: Number(vigencia) || 10,
+        incluye_iva: conIva,
+        fecha_texto: fecha,
+        items: seleccion.map((v) => ({
+          id: v.id,
+          nombre: v.nombre,
+          categoria: v.categoria || null,
+          periodo: v.periodo || "Mensual",
+          personas: v.personas,
+          transmision: v.transmision,
+          traccion: v.traccion || null,
+          aire_acondicionado: !!v.aire_acondicionado,
+          direccion_asistida: !!v.direccion_asistida,
+          cierre_centralizado: !!v.cierre_centralizado,
+          airbag: !!v.airbag,
+          km_mensuales: v.km_mensuales,
+          tarifa_mensual: v.tarifa_mensual,
+          franquicia_dano: v.franquicia_dano,
+          franquicia_vuelco: v.franquicia_vuelco,
+          cantidad_disponible: v.cantidad_disponible ?? null,
+          foto_url: v.foto_url || null,
+          foto_slug: v.foto_slug || null,
+        })),
+      });
+    } catch {
+      /* si falla el registro, la descarga igual se hizo */
+    }
   }
 
-  const nombrePdf =
-    "Presupuesto" + (cliente ? " - " + cliente : "") + ".pdf";
+  const nombrePdf = "Presupuesto" + (cliente ? " - " + cliente : "") + ".pdf";
+
+  async function descargar() {
+    if (!docProps) return;
+    setDescargando(true);
+    try {
+      const blob = await pdf(<PresupuestoPDF {...docProps} />).toBlob();
+      bajarBlob(blob, nombrePdf);
+      await registrarDescarga();
+      cargarHistorial();
+    } catch (e) {
+      setMsg("No se pudo descargar el PDF.");
+    } finally {
+      setDescargando(false);
+    }
+  }
 
   return (
     <div className="grid2">
@@ -345,6 +439,15 @@ function TabPresupuesto({ empresa, catalogo }) {
                         ))}
                       </select>
                     </label>
+                    <label className="fld sm-fld">
+                      <span>Cant. disponible</span>
+                      <input
+                        type="number"
+                        value={v.cantidad_disponible ?? ""}
+                        onChange={(e) => editar(v.id, "cantidad_disponible", e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="—"
+                      />
+                    </label>
                   </div>
                   <div className="item-grid">
                     <NumFld label="Km mensuales" val={v.km_mensuales} on={(n) => editar(v.id, "km_mensuales", n)} />
@@ -358,13 +461,45 @@ function TabPresupuesto({ empresa, catalogo }) {
               <button className="btn primary" onClick={generar} disabled={generando}>
                 {generando ? "Generando…" : "Generar PDF"}
               </button>
-              <button className="btn ghost" onClick={guardar} disabled={guardando}>
-                {guardando ? "Guardando…" : "Guardar en historial"}
-              </button>
               {msg ? <span className="muted small">{msg}</span> : null}
             </div>
           </div>
         )}
+
+        <div className="card">
+          <h3>Últimas cotizaciones</h3>
+          <p className="muted small">Los últimos 10 PDF descargados desde la plataforma.</p>
+          {historial.length === 0 ? (
+            <p className="muted small">Todavía no hay cotizaciones descargadas.</p>
+          ) : (
+            <div className="hist-list">
+              {historial.map((rec) => {
+                const items = Array.isArray(rec.items) ? rec.items : [];
+                return (
+                  <div key={rec.id} className="hist-item">
+                    <div className="hist-info">
+                      <div className="hist-cliente">{rec.cliente || "Sin cliente"}</div>
+                      <div className="hist-meta">
+                        {fmtFecha(rec.created_at)} · {items.length} vehículo{items.length === 1 ? "" : "s"}
+                      </div>
+                      {items.length ? (
+                        <div className="hist-veh">{items.map((i) => i.nombre).join(" · ")}</div>
+                      ) : null}
+                    </div>
+                    <button
+                      className="btn ghost sm"
+                      onClick={() => descargarHistorial(rec)}
+                      disabled={descargandoId === rec.id}
+                      title="Volver a descargar este PDF"
+                    >
+                      {descargandoId === rec.id ? "…" : "⬇ PDF"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="col">
@@ -372,9 +507,9 @@ function TabPresupuesto({ empresa, catalogo }) {
           <div className="preview-head">
             <h3>Vista previa</h3>
             {docProps ? (
-              <PDFDownloadLink document={<PresupuestoPDF {...docProps} />} fileName={nombrePdf} className="btn primary sm">
-                {({ loading }) => (loading ? "Preparando…" : "⬇ Descargar PDF")}
-              </PDFDownloadLink>
+              <button className="btn primary sm" onClick={descargar} disabled={descargando}>
+                {descargando ? "Preparando…" : "⬇ Descargar PDF"}
+              </button>
             ) : null}
           </div>
           {docProps ? (
@@ -497,6 +632,10 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
     const payload = {
       nombre: v.nombre.trim(),
       categoria: (v.categoria || "").trim() || null,
+      cantidad_disponible:
+        v.cantidad_disponible === "" || v.cantidad_disponible == null
+          ? null
+          : Number(v.cantidad_disponible),
       orden: Number(v.orden) || 0,
       personas: Number(v.personas) || 0,
       transmision: v.transmision,
@@ -563,6 +702,15 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
                 value={v.categoria || ""}
                 onChange={(e) => set("categoria", e.target.value.toUpperCase())}
                 placeholder="Ej: M, S, J…"
+              />
+            </label>
+            <label className="fld sm-fld">
+              <span>Cant. disponible</span>
+              <input
+                type="number"
+                value={v.cantidad_disponible ?? ""}
+                onChange={(e) => set("cantidad_disponible", e.target.value)}
+                placeholder="—"
               />
             </label>
             <label className="fld sm-fld">

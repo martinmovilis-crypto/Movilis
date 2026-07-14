@@ -113,6 +113,7 @@ export function vehiculoNuevo() {
   return {
     nombre: "",
     categoria: "",
+    cantidad_disponible: "",
     orden: 99,
     personas: 5,
     transmision: "Manual",

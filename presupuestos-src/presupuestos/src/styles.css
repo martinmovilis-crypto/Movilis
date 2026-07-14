@@ -210,3 +210,18 @@ body {
 .chip-check input { width: 15px; height: 15px; }
 
 .config { max-width: 560px; }
+
+/* Historial de cotizaciones */
+.hist-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; background: #fff;
+}
+.hist-info { min-width: 0; }
+.hist-cliente { font-weight: 700; font-size: 14px; }
+.hist-meta { color: var(--gris); font-size: 12px; margin-top: 1px; }
+.hist-veh {
+  color: #555; font-size: 12px; margin-top: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;
+}
+.hist-item .btn { flex-shrink: 0; }

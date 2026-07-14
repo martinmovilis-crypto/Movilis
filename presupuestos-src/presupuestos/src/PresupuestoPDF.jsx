@@ -174,6 +174,12 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
             <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
             <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido" : "+ IVA · reajuste trimestral"}</Text>
             <View style={s.panelDiv} />
+            {v.cantidad_disponible != null && Number(v.cantidad_disponible) > 0 ? (
+              <View style={s.panelRow}>
+                <Text style={s.panelRowLabel}>Unidades disponibles</Text>
+                <Text style={s.panelRowVal}>{numero(v.cantidad_disponible)}</Text>
+              </View>
+            ) : null}
             <View style={s.panelRow}>
               <Text style={s.panelRowLabel}>Kilómetros por mes</Text>
               <Text style={s.panelRowVal}>{numero(v.km_mensuales)} KM</Text>
