@@ -170,7 +170,7 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
           </View>
 
           <View style={s.panel}>
-            <Text style={s.panelLabel}>TARIFA MENSUAL</Text>
+            <Text style={s.panelLabel}>TARIFA {(v.periodo || "Mensual").toUpperCase()}</Text>
             <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
             <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido" : "+ IVA · reajuste trimestral"}</Text>
             <View style={s.panelDiv} />

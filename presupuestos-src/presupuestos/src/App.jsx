@@ -7,6 +7,7 @@ import {
   guardarEmpresa,
   EMPRESA_DEFAULT,
   CATEGORIAS,
+  PERIODOS,
   fotoDe,
   slugify,
   pesos,
@@ -335,9 +336,19 @@ function TabPresupuesto({ empresa, catalogo }) {
                       </label>
                     ))}
                   </div>
+                  <div className="row item-specs">
+                    <label className="fld">
+                      <span>Período de la tarifa</span>
+                      <select value={v.periodo || "Mensual"} onChange={(e) => editar(v.id, "periodo", e.target.value)}>
+                        {PERIODOS.map((pd) => (
+                          <option key={pd}>{pd}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="item-grid">
                     <NumFld label="Km mensuales" val={v.km_mensuales} on={(n) => editar(v.id, "km_mensuales", n)} />
-                    <NumFld label="Tarifa mensual" val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
+                    <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
                     <NumFld label="Franquicia Daño" val={v.franquicia_dano} on={(n) => editar(v.id, "franquicia_dano", n)} money />
                     <NumFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(n) => editar(v.id, "franquicia_vuelco", n)} money />
                   </div>

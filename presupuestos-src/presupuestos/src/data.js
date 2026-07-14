@@ -106,6 +106,9 @@ export const CATEGORIAS = [
   "C", "H", "H1", "K", "K1", "Z", "N1", "M", "S", "L", "J", "U1", "U2", "U3", "U4",
 ];
 
+// Período de la tarifa (elegible al cotizar).
+export const PERIODOS = ["Mensual", "Trimestral", "Cuatrimestral", "Semestral", "Anual"];
+
 export function vehiculoNuevo() {
   return {
     nombre: "",
