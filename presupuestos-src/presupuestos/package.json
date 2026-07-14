@@ -42,8 +42,11 @@
       "electron/**/*"
     ],
     "win": {
-      "target": "nsis",
+      "target": ["portable", "nsis"],
       "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "Cotizador Renting Corporativo PORTABLE ${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
