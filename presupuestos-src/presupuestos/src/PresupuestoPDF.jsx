@@ -97,6 +97,16 @@ const s = StyleSheet.create({
   portadaTitulo: { color: NEGRO, fontFamily: "Helvetica-Bold", fontSize: 33, lineHeight: 1.06, marginTop: 8 },
   portadaBarra: { width: 84, height: 5, backgroundColor: AMARILLO, marginTop: 16 },
   portadaLogoTop: { width: 158, height: 56, objectFit: "contain", marginTop: 4 },
+  portadaLogoEmpresaWrap: {
+    position: "absolute",
+    right: 50,
+    top: 132,
+    width: 280,
+    height: 150,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  portadaLogoEmpresa: { maxWidth: 280, maxHeight: 150, objectFit: "contain" },
   portadaMeta: { flexDirection: "row", marginTop: 30 },
   metaLabel: { color: "#9a9a9a", fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
   metaValor: { color: NEGRO, fontSize: 14, marginTop: 3 },
@@ -172,7 +182,7 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
           <View style={s.panel}>
             <Text style={s.panelLabel}>TARIFA {(v.periodo || "Mensual").toUpperCase()}</Text>
             <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
-            <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido" : "+ IVA · reajuste trimestral"}</Text>
+            <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido · reajuste según INDEC" : "+ IVA · reajuste según INDEC"}</Text>
             <View style={s.panelDiv} />
             {v.cantidad_disponible != null && Number(v.cantidad_disponible) > 0 ? (
               <View style={s.panelRow}>
@@ -200,7 +210,7 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
         <View style={s.pieCol}>
           <Text style={s.pieTag}>{conIva ? "PRECIOS CON IVA (21%)" : "PRECIOS SIN IVA"}</Text>
           <Text style={s.pieNota}>Cobertura contra todo riesgo con franquicia · Desgaste de cubierta por uso (60.000 km) · Mantenimiento cada 10.000 km · Asistencia en viaje 24 h.</Text>
-          <Text style={s.pieNota}>Cotización válida por {vigencia} días desde su emisión.</Text>
+          <Text style={s.pieNota}>Las tarifas se reajustan según el índice INDEC. Cotización válida por {vigencia} días desde su emisión.</Text>
         </View>
         <View>
           <Text style={s.pieContacto}>{empresa.vendedor} · {empresa.email}</Text>
@@ -211,13 +221,18 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
   );
 }
 
-export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, conIva, fecha }) {
+export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, conIva, fecha, logoEmpresa }) {
   return (
     <Document title={`Presupuesto ${cliente || ""}`.trim()} author={empresa.razon}>
       {/* Portada (clara, estilo PowerPoint) */}
       <Page size={SLIDE} style={s.page}>
         <View style={s.portada}>
           <View style={s.portadaBarraDer} />
+          {logoEmpresa ? (
+            <View style={s.portadaLogoEmpresaWrap}>
+              <Image src={logoEmpresa} style={s.portadaLogoEmpresa} />
+            </View>
+          ) : null}
           <View style={s.portadaTop}>
             <View style={s.portadaTitBlock}>
               <Text style={s.portadaEyebrow}>PRESUPUESTO</Text>

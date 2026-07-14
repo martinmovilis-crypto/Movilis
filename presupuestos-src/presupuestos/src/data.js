@@ -29,6 +29,26 @@ export function guardarEmpresa(empresa) {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(empresa));
 }
 
+// Logo de la empresa que va en la portada del PDF (data URI, guardado local).
+export const LOGO_KEY = "presupuestos_logo_v1";
+
+export function cargarLogo() {
+  try {
+    return localStorage.getItem(LOGO_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function guardarLogo(dataUri) {
+  try {
+    if (dataUri) localStorage.setItem(LOGO_KEY, dataUri);
+    else localStorage.removeItem(LOGO_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 // ---- Servicios incluidos por vehículo (bullets de la cotización) ----
 export const SERVICIOS_INCLUIDOS = [
   "Cobertura contra todo riesgo con franquicia",

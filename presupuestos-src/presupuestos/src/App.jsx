@@ -5,6 +5,8 @@ import PresupuestoPDF from "./PresupuestoPDF.jsx";
 import {
   cargarEmpresa,
   guardarEmpresa,
+  cargarLogo,
+  guardarLogo,
   EMPRESA_DEFAULT,
   CATEGORIAS,
   PERIODOS,
@@ -35,6 +37,30 @@ function bajarBlob(blob, nombre) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// Convierte un logo a data URI PNG (preserva transparencia), redimensionado.
+function convertirLogoPng(file, maxW = 600) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const escala = Math.min(1, maxW / img.width || 1);
+        const w = Math.max(1, Math.round(img.width * escala));
+        const h = Math.max(1, Math.round(img.height * escala));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 // Convierte cualquier imagen (incluido AVIF/WebP) a un Blob JPEG, redimensionada.
@@ -106,6 +132,7 @@ function urlAJpegDataUri(url, maxW = 1000, quality = 0.82) {
 export default function App() {
   const [tab, setTab] = useState("presupuesto");
   const [empresa, setEmpresa] = useState(cargarEmpresa());
+  const [logoEmpresa, setLogoEmpresa] = useState(cargarLogo());
   const [catalogo, setCatalogo] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -157,7 +184,12 @@ export default function App() {
             {/* Las 3 solapas quedan montadas y se muestran/ocultan: así el
                 presupuesto en curso no se pierde al cambiar de solapa. */}
             <div style={{ display: tab === "presupuesto" ? "block" : "none" }}>
-              <TabPresupuesto empresa={empresa} catalogo={catalogo} />
+              <TabPresupuesto
+                empresa={empresa}
+                catalogo={catalogo}
+                logoEmpresa={logoEmpresa}
+                setLogoEmpresa={setLogoEmpresa}
+              />
             </div>
             <div style={{ display: tab === "catalogo" ? "block" : "none" }}>
               <TabCatalogo catalogo={catalogo} onCambio={refrescarCatalogo} />
@@ -175,7 +207,7 @@ export default function App() {
 /* ------------------------------------------------------------------ */
 /* NUEVO PRESUPUESTO                                                   */
 /* ------------------------------------------------------------------ */
-function TabPresupuesto({ empresa, catalogo }) {
+function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
   const [cliente, setCliente] = useState("");
   const [fecha] = useState(hoy());
   const [vigencia, setVigencia] = useState(10);
@@ -187,8 +219,30 @@ function TabPresupuesto({ empresa, catalogo }) {
   const [msg, setMsg] = useState("");
   const [historial, setHistorial] = useState([]);
   const [descargandoId, setDescargandoId] = useState(null);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   const idsSel = seleccion.map((v) => v.id);
+
+  async function subirLogo(file) {
+    if (!file) return;
+    setSubiendoLogo(true);
+    try {
+      const dataUri = await convertirLogoPng(file);
+      setLogoEmpresa(dataUri);
+      guardarLogo(dataUri);
+      setDocProps((d) => (d ? { ...d, logoEmpresa: dataUri } : d));
+    } catch {
+      /* ignore */
+    } finally {
+      setSubiendoLogo(false);
+    }
+  }
+
+  function quitarLogo() {
+    setLogoEmpresa(null);
+    guardarLogo(null);
+    setDocProps((d) => (d ? { ...d, logoEmpresa: null } : d));
+  }
 
   async function cargarHistorial() {
     const { data } = await supabase
@@ -222,6 +276,7 @@ function TabPresupuesto({ empresa, catalogo }) {
           vigencia={rec.vigencia_dias || 10}
           conIva={!!rec.incluye_iva}
           fecha={rec.fecha_texto || fmtFecha(rec.created_at)}
+          logoEmpresa={logoEmpresa}
         />
       );
       const blob = await pdf(doc).toBlob();
@@ -270,6 +325,7 @@ function TabPresupuesto({ empresa, catalogo }) {
       vigencia: Number(vigencia) || 10,
       conIva,
       fecha,
+      logoEmpresa,
     });
     setGenerando(false);
   }
@@ -521,6 +577,25 @@ function TabPresupuesto({ empresa, catalogo }) {
               <p>Elegí vehículos, ajustá las tarifas y tocá <b>Generar PDF</b> para ver el presupuesto.</p>
             </div>
           )}
+        </div>
+
+        <div className="card">
+          <h3>Logo de la empresa (portada del PDF)</h3>
+          <p className="muted small">Aparece en la portada del presupuesto. Se guarda en esta computadora.</p>
+          <div className="logo-uploader">
+            <div className="logo-preview">
+              {logoEmpresa ? <img src={logoEmpresa} alt="Logo de la empresa" /> : <span className="muted small">Sin logo</span>}
+            </div>
+            <div className="logo-actions">
+              <label className="btn ghost sm file-btn">
+                {subiendoLogo ? "Cargando…" : logoEmpresa ? "📷 Cambiar logo" : "📷 Subir logo"}
+                <input type="file" accept="image/*" hidden onChange={(e) => subirLogo(e.target.files?.[0])} />
+              </label>
+              {logoEmpresa ? (
+                <button className="btn ghost sm" onClick={quitarLogo}>Quitar</button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </section>
     </div>
