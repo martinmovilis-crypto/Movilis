@@ -11,6 +11,7 @@ import {
   CATEGORIAS,
   PERIODOS,
   FRECUENCIAS,
+  PLAZOS,
   fotoDe,
   slugify,
   pesos,
@@ -439,6 +440,11 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
                 <option key={c} value={c} />
               ))}
             </datalist>
+            <datalist id="plazos-list">
+              {PLAZOS.map((p) => (
+                <option key={p} value={p}>{p} meses</option>
+              ))}
+            </datalist>
             {seleccion
               .slice()
               .sort((a, b) => (a.orden || 0) - (b.orden || 0))
@@ -502,9 +508,10 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
                       <span>Plazo (meses)</span>
                       <input
                         type="number"
+                        list="plazos-list"
                         value={v.plazo_meses ?? ""}
                         onChange={(e) => editar(v.id, "plazo_meses", e.target.value === "" ? "" : Number(e.target.value))}
-                        placeholder="—"
+                        placeholder="Elegí…"
                       />
                     </label>
                     <label className="fld sm-fld">

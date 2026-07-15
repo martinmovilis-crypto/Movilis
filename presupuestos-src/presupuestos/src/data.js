@@ -132,6 +132,9 @@ export const PERIODOS = ["Mensual", "Trimestral", "Cuatrimestral", "Semestral", 
 // Frecuencia de actualización de la tarifa según INDEC (negociable por empresa).
 export const FRECUENCIAS = ["Mensual", "Bimestral", "Trimestral", "Cuatrimestral", "Semestral", "Anual"];
 
+// Plazos de contrato más comunes (en meses). Editable igual por si negocian otro.
+export const PLAZOS = [12, 24, 36, 48, 60];
+
 export function vehiculoNuevo() {
   return {
     nombre: "",
