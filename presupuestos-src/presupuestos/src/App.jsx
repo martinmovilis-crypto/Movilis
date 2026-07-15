@@ -10,6 +10,7 @@ import {
   EMPRESA_DEFAULT,
   CATEGORIAS,
   PERIODOS,
+  FRECUENCIAS,
   fotoDe,
   slugify,
   pesos,
@@ -345,6 +346,8 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
           nombre: v.nombre,
           categoria: v.categoria || null,
           periodo: v.periodo || "Mensual",
+          frecuencia_actualizacion: v.frecuencia_actualizacion || "Trimestral",
+          plazo_meses: v.plazo_meses ?? null,
           personas: v.personas,
           transmision: v.transmision,
           traccion: v.traccion || null,
@@ -496,6 +499,15 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
                       </select>
                     </label>
                     <label className="fld sm-fld">
+                      <span>Plazo (meses)</span>
+                      <input
+                        type="number"
+                        value={v.plazo_meses ?? ""}
+                        onChange={(e) => editar(v.id, "plazo_meses", e.target.value === "" ? "" : Number(e.target.value))}
+                        placeholder="—"
+                      />
+                    </label>
+                    <label className="fld sm-fld">
                       <span>Cant. disponible</span>
                       <input
                         type="number"
@@ -503,6 +515,19 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
                         onChange={(e) => editar(v.id, "cantidad_disponible", e.target.value === "" ? "" : Number(e.target.value))}
                         placeholder="—"
                       />
+                    </label>
+                  </div>
+                  <div className="row item-specs">
+                    <label className="fld">
+                      <span>Actualización de tarifa (INDEC)</span>
+                      <select
+                        value={v.frecuencia_actualizacion || "Trimestral"}
+                        onChange={(e) => editar(v.id, "frecuencia_actualizacion", e.target.value)}
+                      >
+                        {FRECUENCIAS.map((f) => (
+                          <option key={f}>{f}</option>
+                        ))}
+                      </select>
                     </label>
                   </div>
                   <div className="item-grid">

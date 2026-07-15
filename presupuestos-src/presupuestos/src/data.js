@@ -129,6 +129,9 @@ export const CATEGORIAS = [
 // Período de la tarifa (elegible al cotizar).
 export const PERIODOS = ["Mensual", "Trimestral", "Cuatrimestral", "Semestral", "Anual"];
 
+// Frecuencia de actualización de la tarifa según INDEC (negociable por empresa).
+export const FRECUENCIAS = ["Mensual", "Bimestral", "Trimestral", "Cuatrimestral", "Semestral", "Anual"];
+
 export function vehiculoNuevo() {
   return {
     nombre: "",

@@ -34,7 +34,19 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 34,
   },
-  barraTitulo: { fontFamily: "Helvetica-Bold", fontSize: 16, letterSpacing: 3, color: NEGRO },
+  barraIzq: { flexDirection: "row", alignItems: "center", flexShrink: 1, paddingRight: 10 },
+  barraTitulo: { fontFamily: "Helvetica-Bold", fontSize: 14, letterSpacing: 0.5, color: NEGRO },
+  barraCat: {
+    marginLeft: 10,
+    backgroundColor: NEGRO,
+    color: AMARILLO,
+    fontFamily: "Helvetica-Bold",
+    fontSize: 10,
+    letterSpacing: 1,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
   barraDer: { flexDirection: "row", alignItems: "center" },
   logo: { width: 84, height: 30, objectFit: "contain" },
   barraSuc: {
@@ -67,15 +79,18 @@ const s = StyleSheet.create({
   },
 
   fila: { flexDirection: "row", flexGrow: 1, alignItems: "center" },
-  colFoto: { width: "60%", alignItems: "center", justifyContent: "center", paddingRight: 16 },
+  colFoto: { width: "57%", alignItems: "center", justifyContent: "center", paddingRight: 14 },
   foto: { maxWidth: "100%", maxHeight: 178, objectFit: "contain" },
   fotoVacia: { color: "#c2c2c2", fontSize: 11 },
 
   // ---- Panel de precio (oscuro, protagonista) ----
-  panel: { width: "40%", backgroundColor: PANEL, borderRadius: 10, padding: 14, justifyContent: "center" },
+  panel: { width: "43%", backgroundColor: PANEL, borderRadius: 10, padding: 14, justifyContent: "center" },
   panelLabel: { color: AMARILLO, fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
-  panelPrecio: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 27, marginTop: 2 },
-  panelSub: { color: GRIS_TXT, fontSize: 7.5, marginTop: 1 },
+  panelPrecioRow: { flexDirection: "row", alignItems: "flex-end", marginTop: 2 },
+  panelPrecio: { color: BLANCO, fontFamily: "Helvetica-Bold", fontSize: 25 },
+  panelIva: { color: AMARILLO, fontFamily: "Helvetica-Bold", fontSize: 18, marginLeft: 5, marginBottom: 2 },
+  panelIvaIncl: { color: GRIS_TXT, fontSize: 9, marginLeft: 5, marginBottom: 3 },
+  panelSub: { color: GRIS_TXT, fontSize: 7.5, marginTop: 3 },
   panelDiv: { height: 3, width: 34, backgroundColor: AMARILLO, marginVertical: 9 },
   panelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   panelRowLabel: { color: GRIS_TXT, fontSize: 8.5 },
@@ -136,10 +151,13 @@ const s = StyleSheet.create({
   servDesc: { fontSize: 8.5, color: "#666", lineHeight: 1.4 },
 });
 
-function BarraSuperior({ empresa, titulo }) {
+function BarraSuperior({ empresa, titulo, categoria }) {
   return (
     <View style={s.barra}>
-      <Text style={s.barraTitulo}>{titulo}</Text>
+      <View style={s.barraIzq}>
+        <Text style={s.barraTitulo}>{titulo}</Text>
+        {categoria ? <Text style={s.barraCat}>CAT. {categoria}</Text> : null}
+      </View>
       <View style={s.barraDer}>
         <Image src={HERTZ_LOGO} style={s.logo} />
         <Text style={s.barraSuc}>{(empresa.sucursal || "La Plata").toUpperCase()}</Text>
@@ -158,12 +176,13 @@ function chipsSpec(v) {
   return c;
 }
 
-function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
+function PaginaVehiculo({ v, empresa, cliente, vigencia, conIva }) {
   const foto = fotoDe(v);
   const factor = conIva ? 1 + IVA : 1;
+  const tituloBarra = (cliente || empresa.razon || "Presupuesto").toUpperCase();
   return (
     <Page size={SLIDE} style={s.page}>
-      <BarraSuperior empresa={empresa} titulo="COTIZACIÓN" />
+      <BarraSuperior empresa={empresa} titulo={tituloBarra} categoria={v.categoria} />
 
       <View style={s.cuerpo}>
         <Text style={s.vehTitulo}>{v.nombre}</Text>
@@ -181,9 +200,24 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
 
           <View style={s.panel}>
             <Text style={s.panelLabel}>TARIFA {(v.periodo || "Mensual").toUpperCase()}</Text>
-            <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
-            <Text style={s.panelSub}>{conIva ? "IVA (21%) incluido · reajuste según INDEC" : "+ IVA · reajuste según INDEC"}</Text>
+            <View style={s.panelPrecioRow}>
+              <Text style={s.panelPrecio}>{pesos(v.tarifa_mensual * factor)}</Text>
+              {conIva ? (
+                <Text style={s.panelIvaIncl}>IVA incl.</Text>
+              ) : (
+                <Text style={s.panelIva}>+ IVA</Text>
+              )}
+            </View>
+            <Text style={s.panelSub}>
+              ACTUALIZACIÓN DE LA TARIFA {(v.frecuencia_actualizacion || "Trimestral").toUpperCase()} SEGÚN INDEC
+            </Text>
             <View style={s.panelDiv} />
+            {v.plazo_meses != null && Number(v.plazo_meses) > 0 ? (
+              <View style={s.panelRow}>
+                <Text style={s.panelRowLabel}>Plazo del contrato</Text>
+                <Text style={s.panelRowVal}>{numero(v.plazo_meses)} meses</Text>
+              </View>
+            ) : null}
             {v.cantidad_disponible != null && Number(v.cantidad_disponible) > 0 ? (
               <View style={s.panelRow}>
                 <Text style={s.panelRowLabel}>Unidades disponibles</Text>
@@ -210,7 +244,7 @@ function PaginaVehiculo({ v, empresa, vigencia, conIva }) {
         <View style={s.pieCol}>
           <Text style={s.pieTag}>{conIva ? "PRECIOS CON IVA (21%)" : "PRECIOS SIN IVA"}</Text>
           <Text style={s.pieNota}>Cobertura contra todo riesgo con franquicia · Desgaste de cubierta por uso (60.000 km) · Mantenimiento cada 10.000 km · Asistencia en viaje 24 h.</Text>
-          <Text style={s.pieNota}>Las tarifas se reajustan según el índice INDEC. Cotización válida por {vigencia} días desde su emisión.</Text>
+          <Text style={s.pieNota}>Cotización válida por {vigencia} días desde su emisión.</Text>
         </View>
         <View>
           <Text style={s.pieContacto}>{empresa.vendedor} · {empresa.email}</Text>
@@ -292,7 +326,7 @@ export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, 
 
       {/* Una página por vehículo */}
       {vehiculos.map((v) => (
-        <PaginaVehiculo key={v.id || v.nombre} v={v} empresa={empresa} vigencia={vigencia} conIva={conIva} />
+        <PaginaVehiculo key={v.id || v.nombre} v={v} empresa={empresa} cliente={cliente} vigencia={vigencia} conIva={conIva} />
       ))}
     </Document>
   );
