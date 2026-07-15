@@ -152,21 +152,29 @@ export default function App() {
     setCargando(false);
   }
 
-  // Historial de cotizaciones (compartido entre solapas).
+  // Historial de cotizaciones. Cada vendedor ve SOLO las suyas: se filtra por
+  // el nombre de vendedor cargado en Configuración.
   const [historial, setHistorial] = useState([]);
   async function cargarHistorial() {
-    const { data } = await supabase
+    const vend = (empresa.vendedor || "").trim();
+    let query = supabase
       .from("renting_presupuestos")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(1000);
+    if (vend) query = query.eq("vendedor", vend);
+    const { data } = await query;
     setHistorial(data || []);
   }
 
   useEffect(() => {
     refrescarCatalogo();
-    cargarHistorial();
   }, []);
+
+  // Recarga el historial al inicio y cada vez que cambia el vendedor (Config).
+  useEffect(() => {
+    cargarHistorial();
+  }, [empresa.vendedor]);
 
   return (
     <div className="app">
@@ -645,9 +653,10 @@ function TabHistorial({ historial, empresa, logoEmpresa, recargar }) {
     <div className="historial">
       <div className="cat-head">
         <div>
-          <h2>Historial de cotizaciones</h2>
+          <h2>Mis cotizaciones</h2>
           <p className="muted">
-            Todas las cotizaciones descargadas desde la plataforma, de todo el equipo. Podés volver a descargar cualquiera.
+            Tus cotizaciones descargadas (vendedor: <b>{empresa.vendedor || "sin nombre"}</b>). Cada uno ve solo las suyas
+            — cambiá tu nombre en <b>Configuración</b>. Podés volver a descargar cualquiera.
           </p>
         </div>
         <button className="btn ghost" onClick={recargar}>↻ Actualizar</button>
