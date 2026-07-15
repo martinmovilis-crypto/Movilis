@@ -152,8 +152,20 @@ export default function App() {
     setCargando(false);
   }
 
+  // Historial de cotizaciones (compartido entre solapas).
+  const [historial, setHistorial] = useState([]);
+  async function cargarHistorial() {
+    const { data } = await supabase
+      .from("renting_presupuestos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    setHistorial(data || []);
+  }
+
   useEffect(() => {
     refrescarCatalogo();
+    cargarHistorial();
   }, []);
 
   return (
@@ -166,6 +178,9 @@ export default function App() {
         <nav className="tabs">
           <button className={tab === "presupuesto" ? "on" : ""} onClick={() => setTab("presupuesto")}>
             Nuevo presupuesto
+          </button>
+          <button className={tab === "historial" ? "on" : ""} onClick={() => setTab("historial")}>
+            Historial
           </button>
           <button className={tab === "catalogo" ? "on" : ""} onClick={() => setTab("catalogo")}>
             Catálogo y fotos
@@ -191,6 +206,15 @@ export default function App() {
                 catalogo={catalogo}
                 logoEmpresa={logoEmpresa}
                 setLogoEmpresa={setLogoEmpresa}
+                onDescarga={cargarHistorial}
+              />
+            </div>
+            <div style={{ display: tab === "historial" ? "block" : "none" }}>
+              <TabHistorial
+                historial={historial}
+                empresa={empresa}
+                logoEmpresa={logoEmpresa}
+                recargar={cargarHistorial}
               />
             </div>
             <div style={{ display: tab === "catalogo" ? "block" : "none" }}>
@@ -209,7 +233,7 @@ export default function App() {
 /* ------------------------------------------------------------------ */
 /* NUEVO PRESUPUESTO                                                   */
 /* ------------------------------------------------------------------ */
-function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
+function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDescarga }) {
   const [cliente, setCliente] = useState("");
   const [fecha] = useState(hoy());
   const [vigencia, setVigencia] = useState(10);
@@ -219,8 +243,6 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
   const [generando, setGenerando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [msg, setMsg] = useState("");
-  const [historial, setHistorial] = useState([]);
-  const [descargandoId, setDescargandoId] = useState(null);
   const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   const idsSel = seleccion.map((v) => v.id);
@@ -244,50 +266,6 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
     setLogoEmpresa(null);
     guardarLogo(null);
     setDocProps((d) => (d ? { ...d, logoEmpresa: null } : d));
-  }
-
-  async function cargarHistorial() {
-    const { data } = await supabase
-      .from("renting_presupuestos")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10);
-    setHistorial(data || []);
-  }
-
-  useEffect(() => {
-    cargarHistorial();
-  }, []);
-
-  async function descargarHistorial(rec) {
-    setDescargandoId(rec.id);
-    try {
-      const items = Array.isArray(rec.items) ? rec.items : [];
-      const vehiculos = await Promise.all(
-        items.map(async (v) => {
-          const src = fotoDe(v);
-          if (src && /^https?:/i.test(src)) return { ...v, foto_url: await urlAJpegDataUri(src) };
-          return { ...v };
-        })
-      );
-      const doc = (
-        <PresupuestoPDF
-          empresa={empresa}
-          cliente={rec.cliente || ""}
-          vehiculos={vehiculos}
-          vigencia={rec.vigencia_dias || 10}
-          conIva={!!rec.incluye_iva}
-          fecha={rec.fecha_texto || fmtFecha(rec.created_at)}
-          logoEmpresa={logoEmpresa}
-        />
-      );
-      const blob = await pdf(doc).toBlob();
-      bajarBlob(blob, "Presupuesto" + (rec.cliente ? " - " + rec.cliente : "") + ".pdf");
-    } catch (e) {
-      /* ignore */
-    } finally {
-      setDescargandoId(null);
-    }
   }
 
   function toggle(v) {
@@ -379,7 +357,8 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
       const blob = await pdf(<PresupuestoPDF {...docProps} />).toBlob();
       bajarBlob(blob, nombrePdf);
       await registrarDescarga();
-      cargarHistorial();
+      onDescarga && onDescarga();
+      setMsg("Cotización descargada y guardada en el Historial ✓");
     } catch (e) {
       setMsg("No se pudo descargar el PDF.");
     } finally {
@@ -553,41 +532,6 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa }) {
             </div>
           </div>
         )}
-
-        <div className="card">
-          <h3>Últimas cotizaciones</h3>
-          <p className="muted small">Los últimos 10 PDF descargados desde la plataforma.</p>
-          {historial.length === 0 ? (
-            <p className="muted small">Todavía no hay cotizaciones descargadas.</p>
-          ) : (
-            <div className="hist-list">
-              {historial.map((rec) => {
-                const items = Array.isArray(rec.items) ? rec.items : [];
-                return (
-                  <div key={rec.id} className="hist-item">
-                    <div className="hist-info">
-                      <div className="hist-cliente">{rec.cliente || "Sin cliente"}</div>
-                      <div className="hist-meta">
-                        {fmtFecha(rec.created_at)} · {items.length} vehículo{items.length === 1 ? "" : "s"}
-                      </div>
-                      {items.length ? (
-                        <div className="hist-veh">{items.map((i) => i.nombre).join(" · ")}</div>
-                      ) : null}
-                    </div>
-                    <button
-                      className="btn ghost sm"
-                      onClick={() => descargarHistorial(rec)}
-                      disabled={descargandoId === rec.id}
-                      title="Volver a descargar este PDF"
-                    >
-                      {descargandoId === rec.id ? "…" : "⬇ PDF"}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </section>
 
       <section className="col">
@@ -647,6 +591,117 @@ function NumFld({ label, val, on, money }) {
         />
       </div>
     </label>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* HISTORIAL DE COTIZACIONES                                          */
+/* ------------------------------------------------------------------ */
+function TabHistorial({ historial, empresa, logoEmpresa, recargar }) {
+  const [descargandoId, setDescargandoId] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+
+  async function descargarHistorial(rec) {
+    setDescargandoId(rec.id);
+    try {
+      const items = Array.isArray(rec.items) ? rec.items : [];
+      const vehiculos = await Promise.all(
+        items.map(async (v) => {
+          const src = fotoDe(v);
+          if (src && /^https?:/i.test(src)) return { ...v, foto_url: await urlAJpegDataUri(src) };
+          return { ...v };
+        })
+      );
+      const doc = (
+        <PresupuestoPDF
+          empresa={empresa}
+          cliente={rec.cliente || ""}
+          vehiculos={vehiculos}
+          vigencia={rec.vigencia_dias || 10}
+          conIva={!!rec.incluye_iva}
+          fecha={rec.fecha_texto || fmtFecha(rec.created_at)}
+          logoEmpresa={logoEmpresa}
+        />
+      );
+      const blob = await pdf(doc).toBlob();
+      bajarBlob(blob, "Presupuesto" + (rec.cliente ? " - " + rec.cliente : "") + ".pdf");
+    } catch (e) {
+      /* ignore */
+    } finally {
+      setDescargandoId(null);
+    }
+  }
+
+  const q = busqueda.trim().toLowerCase();
+  const lista = q
+    ? historial.filter((rec) => {
+        const items = Array.isArray(rec.items) ? rec.items : [];
+        const texto = (rec.cliente || "") + " " + items.map((i) => i.nombre).join(" ") + " " + (rec.vendedor || "");
+        return texto.toLowerCase().includes(q);
+      })
+    : historial;
+
+  return (
+    <div className="historial">
+      <div className="cat-head">
+        <div>
+          <h2>Historial de cotizaciones</h2>
+          <p className="muted">
+            Todas las cotizaciones descargadas desde la plataforma, de todo el equipo. Podés volver a descargar cualquiera.
+          </p>
+        </div>
+        <button className="btn ghost" onClick={recargar}>↻ Actualizar</button>
+      </div>
+
+      <div className="card" style={{ padding: 12 }}>
+        <input
+          className="hist-buscar"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por cliente, vehículo o vendedor…"
+        />
+      </div>
+
+      {lista.length === 0 ? (
+        <div className="card">
+          <p className="muted">
+            {historial.length === 0
+              ? "Todavía no hay cotizaciones. Cuando descargues un PDF, se guarda acá automáticamente."
+              : "No hay resultados para la búsqueda."}
+          </p>
+        </div>
+      ) : (
+        <div className="card">
+          <div className="hist-list">
+            {lista.map((rec) => {
+              const items = Array.isArray(rec.items) ? rec.items : [];
+              return (
+                <div key={rec.id} className="hist-item">
+                  <div className="hist-info">
+                    <div className="hist-cliente">{rec.cliente || "Sin cliente"}</div>
+                    <div className="hist-meta">
+                      {fmtFecha(rec.created_at)}
+                      {rec.vendedor ? " · " + rec.vendedor : ""} · {items.length} vehículo{items.length === 1 ? "" : "s"}
+                    </div>
+                    {items.length ? (
+                      <div className="hist-veh">{items.map((i) => i.nombre).join(" · ")}</div>
+                    ) : null}
+                  </div>
+                  <button
+                    className="btn ghost sm"
+                    onClick={() => descargarHistorial(rec)}
+                    disabled={descargandoId === rec.id}
+                    title="Volver a descargar este PDF"
+                  >
+                    {descargandoId === rec.id ? "…" : "⬇ PDF"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

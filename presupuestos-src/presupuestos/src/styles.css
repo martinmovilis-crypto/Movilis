@@ -233,3 +233,9 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 340px;
 }
 .hist-item .btn { flex-shrink: 0; }
+.hist-buscar {
+  width: 100%; border: 1px solid var(--borde); border-radius: 9px;
+  padding: 9px 12px; font-size: 14px; background: #fff; color: var(--negro);
+}
+.hist-buscar:focus { outline: 2px solid var(--amarillo); border-color: var(--amarillo); }
+.hist-list { max-height: none; }
