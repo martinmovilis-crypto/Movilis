@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PDFViewer, pdf } from "@react-pdf/renderer";
-import { supabase, BUCKET_FOTOS } from "./supabaseClient.js";
+import { supabase, BUCKET_FOTOS, ESPACIO } from "./supabaseClient.js";
 import PresupuestoPDF from "./PresupuestoPDF.jsx";
 import {
   cargarEmpresa,
@@ -146,6 +146,7 @@ export default function App() {
       .from("renting_vehiculos")
       .select("*")
       .eq("activo", true)
+      .eq("espacio", ESPACIO)
       .order("orden", { ascending: true });
     if (error) setError(error.message);
     else setCatalogo(data || []);
@@ -160,6 +161,7 @@ export default function App() {
     let query = supabase
       .from("renting_presupuestos")
       .select("*")
+      .eq("espacio", ESPACIO)
       .order("created_at", { ascending: false })
       .limit(1000);
     if (vend) query = query.eq("vendedor", vend);
@@ -325,6 +327,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
         cliente,
         vendedor: empresa.vendedor,
         sucursal: empresa.sucursal,
+        espacio: ESPACIO,
         vigencia_dias: Number(vigencia) || 10,
         incluye_iva: conIva,
         fecha_texto: fecha,
@@ -823,6 +826,7 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
       // Clave de foto estable: se fija una vez y no cambia al renombrar,
       // así el vehículo no pierde su foto por defecto al editar el nombre.
       foto_slug: v.foto_slug || slugify(v.nombre) || null,
+      espacio: ESPACIO,
       activo: true,
     };
     let error;
