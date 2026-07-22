@@ -28,6 +28,34 @@
     --shadow-soft:0 12px 34px -20px rgba(7,26,26,.4);
     --maxw:1180px;
   }
+
+  /* ====== TEMA NOCHE (día/noche) ====== */
+  :root[data-theme="dark"]{
+    --ink:#020B0A;
+    --ink-2:#061715;
+    --ink-3:#0C2A28;
+    --paper:#06100F;
+    --card:#0D2321;
+    --line:#1B3A34;
+    --muted:#8FA9A2;
+    --text:#E7F1ED;
+    --shadow:0 22px 60px -26px rgba(0,0,0,.7);
+    --shadow-soft:0 12px 34px -20px rgba(0,0,0,.55);
+  }
+  :root[data-theme="dark"] .field input,
+  :root[data-theme="dark"] .field select{background:#0A1E1C;border-color:var(--line)}
+  :root[data-theme="dark"] .preview{background:rgba(174,245,217,.08);border-color:rgba(174,245,217,.22);color:var(--text)}
+  :root[data-theme="dark"] .car .cicon{background:rgba(174,245,217,.12)}
+  :root[data-theme="dark"] .pack{background:linear-gradient(180deg,#0D2321,#06100F)}
+
+  /* botón día/noche */
+  .theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(174,245,217,.3);background:transparent;color:var(--mint);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;flex:none}
+  .theme-toggle:hover{border-color:var(--mint);background:rgba(174,245,217,.08);transform:translateY(-2px)}
+  .theme-toggle svg{width:18px;height:18px}
+  .theme-toggle .ico-sun{display:none}
+  :root[data-theme="dark"] .theme-toggle .ico-sun{display:block}
+  :root[data-theme="dark"] .theme-toggle .ico-moon{display:none}
+
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{margin:0;font-family:"Inter",system-ui,sans-serif;color:var(--text);background:var(--paper);-webkit-font-smoothing:antialiased;line-height:1.55}
@@ -246,7 +274,16 @@
 </style>
 </head>
 <body>
-<script>document.documentElement.classList.add('js');</script>
+<script>
+  (function(){
+    var t=localStorage.getItem('lupo-theme');
+    if(t!=='dark' && t!=='light'){
+      t=(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    document.documentElement.setAttribute('data-theme',t);
+    document.documentElement.classList.add('js');
+  })();
+</script>
 
 <!-- HEADER -->
 <header>
@@ -259,6 +296,10 @@
       <a href="#manada">La Manada</a>
     </nav>
     <div class="nav-cta">
+      <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema día/noche" title="Día / Noche">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
       <a href="#cotizar" class="btn btn-dark">Pedí tu cotización</a>
       <button class="menu-btn" aria-label="Abrir menú" onclick="document.querySelector('.nav-links').style.display='flex';this.style.display='none'"><span></span><span></span><span></span></button>
     </div>
@@ -632,6 +673,18 @@
     pv.classList.add('show');
     window.open("https://wa.me/"+WHATSAPP_PHONE+"?text="+encodeURIComponent(msg),"_blank");
   }
+
+  /* Tema día / noche */
+  (function(){
+    const btn=document.getElementById('themeToggle');
+    if(!btn) return;
+    btn.addEventListener('click',()=>{
+      const cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+      const next=cur==='dark'?'light':'dark';
+      document.documentElement.setAttribute('data-theme',next);
+      try{ localStorage.setItem('lupo-theme',next); }catch(e){}
+    });
+  })();
 
   /* Filtro de vehículos por categoría */
   (function(){
