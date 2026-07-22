@@ -46,7 +46,19 @@
   :root[data-theme="dark"] .field select{background:#0A1E1C;border-color:var(--line)}
   :root[data-theme="dark"] .preview{background:rgba(174,245,217,.08);border-color:rgba(174,245,217,.22);color:var(--text)}
   :root[data-theme="dark"] .car .cicon{background:rgba(174,245,217,.12)}
-  :root[data-theme="dark"] .pack{background:linear-gradient(180deg,#0D2321,#06100F)}
+  /* ritmo de secciones en noche: bandas destacadas + separadores */
+  :root[data-theme="dark"] .steps,
+  :root[data-theme="dark"] .final{background:#0A201D;border-top:1px solid rgba(174,245,217,.07);border-bottom:1px solid rgba(174,245,217,.07)}
+  :root[data-theme="dark"] .trust{background:#0A201D;border-bottom:1px solid rgba(174,245,217,.07)}
+  :root[data-theme="dark"] .pack{background:#06100F;border-top:1px solid rgba(174,245,217,.06);border-bottom:1px solid rgba(174,245,217,.06)}
+  :root[data-theme="dark"] footer{background:#040D0C;border-top:1px solid rgba(174,245,217,.07)}
+  :root[data-theme="dark"] .veh,
+  :root[data-theme="dark"] .fleet{background:#081A18}
+
+  /* transición suave al cambiar de tema */
+  body,header,footer,section.block,.trust,.hero,.quote,.why,.field input,.field select,.preview,.vtab,.feat-specs span{transition:background-color .35s ease,border-color .35s ease,color .35s ease}
+  .car,.vcard,.feat-card{transition:transform .2s ease,box-shadow .2s ease,background-color .35s ease,border-color .35s ease,color .35s ease}
+  .tcard{transition:background-color .35s ease,border-color .35s ease,color .35s ease}
 
   /* botón día/noche */
   .theme-toggle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(174,245,217,.3);background:transparent;color:var(--mint);cursor:pointer;transition:border-color .15s,background .15s,transform .15s;flex:none}
