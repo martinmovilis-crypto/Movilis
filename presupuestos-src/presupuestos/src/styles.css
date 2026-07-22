@@ -56,6 +56,7 @@ body {
 }
 .tabs button:hover { background: #333; color: #fff; }
 .tabs button.on { background: var(--amarillo); color: var(--negro); }
+.tema-btn { margin-left: 8px; border: 1px solid #4a4a4a !important; }
 
 .main { padding: 22px; max-width: 1400px; margin: 0 auto; }
 .loading { padding: 60px; text-align: center; color: var(--gris); }
@@ -239,3 +240,47 @@ body {
 }
 .hist-buscar:focus { outline: 2px solid var(--amarillo); border-color: var(--amarillo); }
 .hist-list { max-height: none; }
+
+/* ============================================================
+   TEMA NOCHE (día / noche). El amarillo Hertz se mantiene.
+   ============================================================ */
+:root[data-theme="dark"] {
+  --negro: #e9ebee;     /* pasa a ser el color de TEXTO principal */
+  --gris: #9aa1ab;
+  --borde: #363b44;
+  --bg: #131519;
+  --card: #1d2026;
+  --sombra: 0 1px 3px rgba(0, 0, 0, .45), 0 8px 24px rgba(0, 0, 0, .4);
+}
+
+/* La barra superior y elementos de marca siguen oscuros. */
+:root[data-theme="dark"] .topbar { background: #0d0e11; }
+:root[data-theme="dark"] .veh-cat { background: #0d0e11; }
+:root[data-theme="dark"] .tema-btn { border-color: #4a5058 !important; }
+
+/* Texto oscuro sobre el amarillo (botones/solapa activa/check). */
+:root[data-theme="dark"] .btn.primary,
+:root[data-theme="dark"] .tabs button.on,
+:root[data-theme="dark"] .veh-check { color: #141414; }
+
+/* Campos y superficies claras -> oscuras. */
+:root[data-theme="dark"] .fld input,
+:root[data-theme="dark"] .fld select,
+:root[data-theme="dark"] .num-wrap,
+:root[data-theme="dark"] .hist-buscar,
+:root[data-theme="dark"] .veh-card,
+:root[data-theme="dark"] .chip-check,
+:root[data-theme="dark"] .hist-item,
+:root[data-theme="dark"] .logo-preview {
+  background: #23272e;
+  color: var(--negro);
+}
+:root[data-theme="dark"] .veh-foto { background: #2a2e35; }
+:root[data-theme="dark"] .item-nombre { background: #262a31; color: var(--negro); }
+:root[data-theme="dark"] .item-nombre:focus { background: #2b2f37; }
+:root[data-theme="dark"] .item-cat { background: #33301c; color: #ffe479; }
+:root[data-theme="dark"] .chip-check.on { background: #3a3620; }
+:root[data-theme="dark"] .btn.ghost { background: #2a2f37; color: var(--negro); }
+:root[data-theme="dark"] .btn.ghost:hover { background: #333944; }
+:root[data-theme="dark"] .btn.danger-ghost { background: #2a2f37; color: #ff8a7a; border-color: #5a3b38; }
+:root[data-theme="dark"] .banner.error { background: #3a1f1f; color: #ffb3b3; }

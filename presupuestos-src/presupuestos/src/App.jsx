@@ -20,16 +20,27 @@ import {
   vehiculoNuevo,
 } from "./data.js";
 
+// Fecha corta tipo 06/06/26 (día/mes/año de 2 dígitos).
 const hoy = () =>
-  new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
+  new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
 const fmtFecha = (iso) => {
   try {
-    return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" });
   } catch {
     return "";
   }
 };
+
+// Tema claro / oscuro (día / noche). Se guarda por computadora.
+const TEMA_KEY = "presupuestos_tema_v1";
+function cargarTema() {
+  try {
+    return localStorage.getItem(TEMA_KEY) === "oscuro" ? "oscuro" : "claro";
+  } catch {
+    return "claro";
+  }
+}
 
 // Dispara la descarga de un Blob como archivo.
 function bajarBlob(blob, nombre) {
@@ -135,7 +146,18 @@ function urlAJpegDataUri(url, maxW = 1000, quality = 0.82) {
 
 export default function App() {
   const [tab, setTab] = useState("presupuesto");
+  const [tema, setTema] = useState(cargarTema());
   const [empresa, setEmpresa] = useState(cargarEmpresa());
+
+  // Aplica el tema (día/noche) al documento y lo recuerda.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", tema === "oscuro" ? "dark" : "light");
+    try {
+      localStorage.setItem(TEMA_KEY, tema);
+    } catch {
+      /* ignore */
+    }
+  }, [tema]);
   const [logoEmpresa, setLogoEmpresa] = useState(cargarLogo());
   const [catalogo, setCatalogo] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -199,6 +221,13 @@ export default function App() {
           </button>
           <button className={tab === "config" ? "on" : ""} onClick={() => setTab("config")}>
             Configuración
+          </button>
+          <button
+            className="tema-btn"
+            onClick={() => setTema((t) => (t === "oscuro" ? "claro" : "oscuro"))}
+            title="Cambiar entre tema día y noche"
+          >
+            {tema === "oscuro" ? "☀ Día" : "🌙 Noche"}
           </button>
         </nav>
       </header>

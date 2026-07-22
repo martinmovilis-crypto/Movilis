@@ -122,7 +122,9 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   portadaLogoEmpresa: { maxWidth: 280, maxHeight: 150, objectFit: "contain" },
-  portadaMeta: { flexDirection: "row", marginTop: 30 },
+  // Bloque vertical: nombre de la empresa arriba y la fecha debajo. Se limita
+  // el ancho para que un nombre largo no se meta debajo del logo de la derecha.
+  portadaMeta: { marginTop: 30, maxWidth: 320 },
   metaLabel: { color: "#9a9a9a", fontSize: 8.5, fontFamily: "Helvetica-Bold", letterSpacing: 2 },
   metaValor: { color: NEGRO, fontSize: 14, marginTop: 3 },
   portadaPie: { borderTopWidth: 1, borderTopColor: GRIS_LINEA, paddingTop: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
@@ -278,7 +280,7 @@ export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, 
 
           <View style={s.portadaMeta}>
             {cliente ? (
-              <View style={{ marginRight: 50 }}>
+              <View style={{ marginBottom: 14 }}>
                 <Text style={s.metaLabel}>PREPARADO PARA</Text>
                 <Text style={s.metaValor}>{cliente}</Text>
               </View>
