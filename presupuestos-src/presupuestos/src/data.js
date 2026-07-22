@@ -135,6 +135,22 @@ export const FRECUENCIAS = ["Mensual", "Bimestral", "Trimestral", "Cuatrimestral
 // Plazos de contrato más comunes (en meses). Editable igual por si negocian otro.
 export const PLAZOS = [12, 24, 36, 48, 60];
 
+// Opciones de kilómetros mensuales.
+export const KM_OPCIONES = ["5000", "3000", "Libre"];
+
+// Etiqueta para el selector: "5.000 km", "3.000 km", "KM LIBRE".
+export function kmLabel(k) {
+  return String(k).toLowerCase() === "libre" ? "KM LIBRE" : numero(Number(k)) + " km";
+}
+
+// Texto de km para el PDF: número -> "5.000 KM"; "Libre" -> "KM LIBRE".
+export function kmTexto(km) {
+  const s = String(km ?? "").trim();
+  if (s === "") return "—";
+  if (/^\d+$/.test(s)) return numero(Number(s)) + " KM";
+  return s.toLowerCase() === "libre" ? "KM LIBRE" : s.toUpperCase();
+}
+
 export function vehiculoNuevo() {
   return {
     nombre: "",
@@ -148,7 +164,7 @@ export function vehiculoNuevo() {
     direccion_asistida: true,
     cierre_centralizado: true,
     airbag: true,
-    km_mensuales: 5000,
+    km_mensuales: "5000",
     tarifa_mensual: 0,
     franquicia_dano: 0,
     franquicia_vuelco: 0,

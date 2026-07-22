@@ -12,6 +12,8 @@ import {
   PERIODOS,
   FRECUENCIAS,
   PLAZOS,
+  KM_OPCIONES,
+  kmLabel,
   fotoDe,
   slugify,
   pesos,
@@ -528,7 +530,20 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                     </label>
                   </div>
                   <div className="item-grid">
-                    <NumFld label="Km mensuales" val={v.km_mensuales} on={(n) => editar(v.id, "km_mensuales", n)} />
+                    <label className="fld">
+                      <span>Km mensuales</span>
+                      <select
+                        value={String(v.km_mensuales ?? "5000")}
+                        onChange={(e) => editar(v.id, "km_mensuales", e.target.value)}
+                      >
+                        {!KM_OPCIONES.includes(String(v.km_mensuales ?? "5000")) ? (
+                          <option value={String(v.km_mensuales)}>{kmLabel(v.km_mensuales)}</option>
+                        ) : null}
+                        {KM_OPCIONES.map((k) => (
+                          <option key={k} value={k}>{kmLabel(k)}</option>
+                        ))}
+                      </select>
+                    </label>
                     <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
                     <NumFld label="Franquicia Daño" val={v.franquicia_dano} on={(n) => editar(v.id, "franquicia_dano", n)} money />
                     <NumFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(n) => editar(v.id, "franquicia_vuelco", n)} money />
@@ -818,7 +833,7 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
       direccion_asistida: !!v.direccion_asistida,
       cierre_centralizado: !!v.cierre_centralizado,
       airbag: !!v.airbag,
-      km_mensuales: Number(v.km_mensuales) || 0,
+      km_mensuales: String(v.km_mensuales ?? "").trim() || "5000",
       tarifa_mensual: Number(v.tarifa_mensual) || 0,
       franquicia_dano: Number(v.franquicia_dano) || 0,
       franquicia_vuelco: Number(v.franquicia_vuelco) || 0,
@@ -932,7 +947,20 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
           </div>
 
           <div className="item-grid">
-            <NumFld label="Km mensuales" val={v.km_mensuales} on={(n) => set("km_mensuales", n)} />
+            <label className="fld">
+              <span>Km mensuales</span>
+              <select
+                value={String(v.km_mensuales ?? "5000")}
+                onChange={(e) => set("km_mensuales", e.target.value)}
+              >
+                {!KM_OPCIONES.includes(String(v.km_mensuales ?? "5000")) ? (
+                  <option value={String(v.km_mensuales)}>{kmLabel(v.km_mensuales)}</option>
+                ) : null}
+                {KM_OPCIONES.map((k) => (
+                  <option key={k} value={k}>{kmLabel(k)}</option>
+                ))}
+              </select>
+            </label>
             <NumFld label="Tarifa base" val={v.tarifa_mensual} on={(n) => set("tarifa_mensual", n)} money />
             <NumFld label="Franquicia Daño" val={v.franquicia_dano} on={(n) => set("franquicia_dano", n)} money />
             <NumFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(n) => set("franquicia_vuelco", n)} money />

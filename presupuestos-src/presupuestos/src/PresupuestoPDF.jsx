@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { HERTZ_LOGO } from "./fotos.js";
-import { INSTITUCIONAL, SERVICIOS, fotoDe, pesos, numero, IVA } from "./data.js";
+import { INSTITUCIONAL, SERVICIOS, fotoDe, pesos, numero, kmTexto, IVA } from "./data.js";
 
 // Paleta con fuerza: negro + amarillo Hertz
 const AMARILLO = "#FFCC00";
@@ -226,7 +226,7 @@ function PaginaVehiculo({ v, empresa, cliente, vigencia, conIva }) {
             ) : null}
             <View style={s.panelRow}>
               <Text style={s.panelRowLabel}>Kilómetros por mes</Text>
-              <Text style={s.panelRowVal}>{numero(v.km_mensuales)} KM</Text>
+              <Text style={s.panelRowVal}>{kmTexto(v.km_mensuales)}</Text>
             </View>
             <View style={s.panelRow}>
               <Text style={s.panelRowLabel}>Franquicia por daño</Text>
