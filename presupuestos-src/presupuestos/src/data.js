@@ -151,6 +151,20 @@ export function kmTexto(km) {
   return s.toLowerCase() === "libre" ? "KM LIBRE" : s.toUpperCase();
 }
 
+// Franquicia: puede ser un monto en pesos (número) o un porcentaje ("3%").
+// Si trae "%", se muestra tal cual. Si es un número, se muestra en pesos
+// (aplicando el factor de IVA cuando corresponde).
+export function franquiciaTexto(val, factor = 1) {
+  const s = String(val ?? "").trim();
+  if (s === "") return "—";
+  if (s.includes("%")) return s.replace(/\s+/g, "");
+  const limpio = s.replace(/[^0-9.,-]/g, "");
+  if (limpio === "") return s; // texto libre, se respeta
+  const n = Number(limpio.replace(/\./g, "").replace(",", "."));
+  if (isNaN(n)) return s;
+  return pesos(n * factor);
+}
+
 export function vehiculoNuevo() {
   return {
     nombre: "",
@@ -166,8 +180,8 @@ export function vehiculoNuevo() {
     airbag: true,
     km_mensuales: "5000",
     tarifa_mensual: 0,
-    franquicia_dano: 0,
-    franquicia_vuelco: 0,
+    franquicia_dano: "",
+    franquicia_vuelco: "",
     foto_url: "",
     foto_slug: "",
     activo: true,

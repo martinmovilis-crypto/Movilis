@@ -81,7 +81,7 @@ body {
 /* Campos */
 .fld { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
 .fld > span { font-size: 12px; color: var(--gris); font-weight: 600; }
-.fld input, .fld select {
+.fld input, .fld select, .fld textarea {
   border: 1px solid var(--borde);
   border-radius: 9px;
   padding: 9px 11px;
@@ -90,7 +90,13 @@ body {
   color: var(--negro);
   width: 100%;
 }
-.fld input:focus, .fld select:focus { outline: 2px solid var(--amarillo); border-color: var(--amarillo); }
+.fld input:focus, .fld select:focus, .fld textarea:focus { outline: 2px solid var(--amarillo); border-color: var(--amarillo); }
+.notas-area {
+  font-family: inherit;
+  resize: vertical;
+  min-height: 46px;
+  line-height: 1.4;
+}
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row .fld { flex: 1; min-width: 120px; }
 .grow { flex: 2 !important; }
@@ -266,6 +272,7 @@ body {
 /* Campos y superficies claras -> oscuras. */
 :root[data-theme="dark"] .fld input,
 :root[data-theme="dark"] .fld select,
+:root[data-theme="dark"] .fld textarea,
 :root[data-theme="dark"] .num-wrap,
 :root[data-theme="dark"] .hist-buscar,
 :root[data-theme="dark"] .veh-card,

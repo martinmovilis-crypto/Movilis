@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import { HERTZ_LOGO } from "./fotos.js";
-import { INSTITUCIONAL, SERVICIOS, fotoDe, pesos, numero, kmTexto, IVA } from "./data.js";
+import { INSTITUCIONAL, SERVICIOS, fotoDe, pesos, numero, kmTexto, franquiciaTexto, IVA } from "./data.js";
 
 // Paleta con fuerza: negro + amarillo Hertz
 const AMARILLO = "#FFCC00";
@@ -76,6 +76,16 @@ const s = StyleSheet.create({
     marginRight: 6,
     marginBottom: 6,
     letterSpacing: 0.3,
+  },
+  notaVeh: {
+    fontSize: 8.5,
+    color: "#3a3a3a",
+    lineHeight: 1.35,
+    marginBottom: 10,
+    paddingRight: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: AMARILLO,
+    paddingLeft: 8,
   },
 
   fila: { flexDirection: "row", flexGrow: 1, alignItems: "center" },
@@ -195,6 +205,13 @@ function PaginaVehiculo({ v, empresa, cliente, vigencia, conIva }) {
           ))}
         </View>
 
+        {v.notas && String(v.notas).trim() ? (
+          <Text style={s.notaVeh}>
+            <Text style={{ fontFamily: "Helvetica-Bold" }}>Observaciones: </Text>
+            {String(v.notas).trim()}
+          </Text>
+        ) : null}
+
         <View style={s.fila}>
           <View style={s.colFoto}>
             {foto ? <Image src={foto} style={s.foto} /> : <Text style={s.fotoVacia}>Sin foto cargada</Text>}
@@ -232,11 +249,11 @@ function PaginaVehiculo({ v, empresa, cliente, vigencia, conIva }) {
             </View>
             <View style={s.panelRow}>
               <Text style={s.panelRowLabel}>Franquicia por daño</Text>
-              <Text style={s.panelRowVal}>{pesos(v.franquicia_dano * factor)}</Text>
+              <Text style={s.panelRowVal}>{franquiciaTexto(v.franquicia_dano, factor)}</Text>
             </View>
             <View style={[s.panelRow, { marginBottom: 0 }]}>
               <Text style={s.panelRowLabel}>Franquicia por vuelco</Text>
-              <Text style={s.panelRowVal}>{pesos(v.franquicia_vuelco * factor)}</Text>
+              <Text style={s.panelRowVal}>{franquiciaTexto(v.franquicia_vuelco, factor)}</Text>
             </View>
           </View>
         </View>

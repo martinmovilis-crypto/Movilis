@@ -380,6 +380,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
           tarifa_mensual: v.tarifa_mensual,
           franquicia_dano: v.franquicia_dano,
           franquicia_vuelco: v.franquicia_vuelco,
+          notas: v.notas || null,
           cantidad_disponible: v.cantidad_disponible ?? null,
           foto_url: v.foto_url || null,
           foto_slug: v.foto_slug || null,
@@ -574,9 +575,19 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                       </select>
                     </label>
                     <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
-                    <NumFld label="Franquicia Daño" val={v.franquicia_dano} on={(n) => editar(v.id, "franquicia_dano", n)} money />
-                    <NumFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(n) => editar(v.id, "franquicia_vuelco", n)} money />
+                    <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => editar(v.id, "franquicia_dano", x)} />
+                    <FranqFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(x) => editar(v.id, "franquicia_vuelco", x)} />
                   </div>
+                  <label className="fld">
+                    <span>Notas / observaciones (opcional)</span>
+                    <textarea
+                      className="notas-area"
+                      value={v.notas || ""}
+                      onChange={(e) => editar(v.id, "notas", e.target.value)}
+                      placeholder="Ej: incluye porta-equipaje, GPS, rotulado de la unidad…"
+                      rows={2}
+                    />
+                  </label>
                 </div>
               ))}
             <div className="acciones">
@@ -645,6 +656,21 @@ function NumFld({ label, val, on, money }) {
           onChange={(e) => on(e.target.value === "" ? 0 : Number(e.target.value))}
         />
       </div>
+    </label>
+  );
+}
+
+// Campo de franquicia: acepta un monto en pesos (ej: 500000) o un
+// porcentaje (ej: 3%). Se guarda como texto para permitir ambos.
+function FranqFld({ label, val, on }) {
+  return (
+    <label className="fld">
+      <span>{label}</span>
+      <input
+        value={val ?? ""}
+        onChange={(e) => on(e.target.value)}
+        placeholder="$ monto o 3%"
+      />
     </label>
   );
 }
@@ -864,8 +890,8 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
       airbag: !!v.airbag,
       km_mensuales: String(v.km_mensuales ?? "").trim() || "5000",
       tarifa_mensual: Number(v.tarifa_mensual) || 0,
-      franquicia_dano: Number(v.franquicia_dano) || 0,
-      franquicia_vuelco: Number(v.franquicia_vuelco) || 0,
+      franquicia_dano: String(v.franquicia_dano ?? "").trim() || null,
+      franquicia_vuelco: String(v.franquicia_vuelco ?? "").trim() || null,
       foto_url: v.foto_url || null,
       // Clave de foto estable: se fija una vez y no cambia al renombrar,
       // así el vehículo no pierde su foto por defecto al editar el nombre.
@@ -991,8 +1017,8 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
               </select>
             </label>
             <NumFld label="Tarifa base" val={v.tarifa_mensual} on={(n) => set("tarifa_mensual", n)} money />
-            <NumFld label="Franquicia Daño" val={v.franquicia_dano} on={(n) => set("franquicia_dano", n)} money />
-            <NumFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(n) => set("franquicia_vuelco", n)} money />
+            <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => set("franquicia_dano", x)} />
+            <FranqFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(x) => set("franquicia_vuelco", x)} />
           </div>
 
           <div className="acciones">
