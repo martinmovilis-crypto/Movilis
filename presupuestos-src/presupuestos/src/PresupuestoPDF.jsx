@@ -77,16 +77,13 @@ const s = StyleSheet.create({
     marginBottom: 6,
     letterSpacing: 0.3,
   },
-  notaVeh: {
-    fontSize: 8.5,
-    color: "#3a3a3a",
-    lineHeight: 1.35,
-    marginBottom: 10,
-    paddingRight: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: AMARILLO,
-    paddingLeft: 8,
-  },
+  // Título del auto + notas al costado (para que una nota larga no se meta
+  // sobre la imagen del vehículo).
+  tituloRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  tituloCol: { flexShrink: 1, paddingRight: 16 },
+  notaCol: { width: "42%", borderLeftWidth: 3, borderLeftColor: AMARILLO, paddingLeft: 8, paddingTop: 2 },
+  notaLabel: { fontSize: 8, fontFamily: "Helvetica-Bold", color: "#8a8a8a", letterSpacing: 1.5, marginBottom: 2 },
+  notaTxt: { fontSize: 8.5, color: "#3a3a3a", lineHeight: 1.35 },
 
   fila: { flexDirection: "row", flexGrow: 1, alignItems: "center" },
   colFoto: { width: "57%", alignItems: "center", justifyContent: "center", paddingRight: 14 },
@@ -197,20 +194,23 @@ function PaginaVehiculo({ v, empresa, cliente, vigencia, conIva }) {
       <BarraSuperior empresa={empresa} titulo={tituloBarra} categoria={v.categoria} />
 
       <View style={s.cuerpo}>
-        <Text style={s.vehTitulo}>{v.nombre}</Text>
-        <View style={s.vehLinea} />
+        <View style={s.tituloRow}>
+          <View style={s.tituloCol}>
+            <Text style={s.vehTitulo}>{v.nombre}</Text>
+            <View style={s.vehLinea} />
+          </View>
+          {v.notas && String(v.notas).trim() ? (
+            <View style={s.notaCol}>
+              <Text style={s.notaLabel}>NOTAS</Text>
+              <Text style={s.notaTxt}>{String(v.notas).trim()}</Text>
+            </View>
+          ) : null}
+        </View>
         <View style={s.chips}>
           {chipsSpec(v).map((c, i) => (
             <Text key={i} style={s.chip}>{c}</Text>
           ))}
         </View>
-
-        {v.notas && String(v.notas).trim() ? (
-          <Text style={s.notaVeh}>
-            <Text style={{ fontFamily: "Helvetica-Bold" }}>Observaciones: </Text>
-            {String(v.notas).trim()}
-          </Text>
-        ) : null}
 
         <View style={s.fila}>
           <View style={s.colFoto}>
