@@ -75,7 +75,8 @@
   .lang{position:relative;flex:none}
   .lang-btn{display:inline-flex;align-items:center;gap:.4rem;font-family:"Sora",sans-serif;font-weight:600;font-size:.82rem;padding:.5rem .7rem;border-radius:999px;border:1.5px solid rgba(7,26,26,.18);background:transparent;color:var(--text);cursor:pointer;transition:border-color .15s,background .15s}
   .lang-btn:hover{border-color:var(--mint-deep)}
-  .lang-flag{font-size:1.05rem;line-height:1}
+  .lang-flag{width:20px;height:15px;display:inline-block;border-radius:2px;overflow:hidden;flex:none;box-shadow:0 0 0 1px rgba(0,0,0,.1)}
+  .lang-flag svg{display:block;width:100%;height:100%}
   .lang-caret{width:14px;height:14px;transition:transform .2s}
   .lang.open .lang-caret{transform:rotate(180deg)}
   .lang-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:120px;list-style:none;margin:0;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-soft);opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .16s ease,transform .16s ease,visibility .16s;z-index:80}
@@ -338,16 +339,16 @@
     <div class="nav-cta">
       <div class="lang" id="lang">
         <button type="button" class="lang-btn" id="langBtn" aria-haspopup="listbox" aria-expanded="false" aria-label="Idioma / Language">
-          <span class="lang-flag" id="langFlag">🇪🇸</span><span class="lang-code" id="langCode">ESP</span>
+          <span class="lang-flag" id="langFlag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#c60b1e"/><rect y="4.5" width="24" height="9" fill="#ffc400"/></svg></span><span class="lang-code" id="langCode">ESP</span>
           <svg class="lang-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </button>
         <ul class="lang-menu" id="langMenu" role="listbox">
-          <li class="lang-opt" role="option" data-lang="es"><span class="lang-flag">🇪🇸</span> ESP</li>
-          <li class="lang-opt" role="option" data-lang="en"><span class="lang-flag">🇬🇧</span> ENG</li>
-          <li class="lang-opt" role="option" data-lang="pt"><span class="lang-flag">🇵🇹</span> POR</li>
-          <li class="lang-opt" role="option" data-lang="it"><span class="lang-flag">🇮🇹</span> ITA</li>
-          <li class="lang-opt" role="option" data-lang="fr"><span class="lang-flag">🇫🇷</span> FRA</li>
-          <li class="lang-opt" role="option" data-lang="de"><span class="lang-flag">🇩🇪</span> GER</li>
+          <li class="lang-opt" role="option" data-lang="es"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#c60b1e"/><rect y="4.5" width="24" height="9" fill="#ffc400"/></svg></span> ESP</li>
+          <li class="lang-opt" role="option" data-lang="en"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#012169"/><path d="M0 0L24 18M24 0L0 18" stroke="#fff" stroke-width="3.6"/><path d="M0 0L24 18M24 0L0 18" stroke="#C8102E" stroke-width="2"/><rect x="9.6" width="4.8" height="18" fill="#fff"/><rect y="6.6" width="24" height="4.8" fill="#fff"/><rect x="10.8" width="2.4" height="18" fill="#C8102E"/><rect y="7.8" width="24" height="2.4" fill="#C8102E"/></svg></span> ENG</li>
+          <li class="lang-opt" role="option" data-lang="pt"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#da291c"/><rect width="9.6" height="18" fill="#046a38"/><circle cx="9.6" cy="9" r="2.6" fill="#ffc400" stroke="#fff" stroke-width=".6"/></svg></span> POR</li>
+          <li class="lang-opt" role="option" data-lang="it"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#fff"/><rect width="8" height="18" fill="#008C45"/><rect x="16" width="8" height="18" fill="#CD212A"/></svg></span> ITA</li>
+          <li class="lang-opt" role="option" data-lang="fr"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#fff"/><rect width="8" height="18" fill="#0055A4"/><rect x="16" width="8" height="18" fill="#EF4135"/></svg></span> FRA</li>
+          <li class="lang-opt" role="option" data-lang="de"><span class="lang-flag"><svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#000"/><rect y="6" width="24" height="6" fill="#DD0000"/><rect y="12" width="24" height="6" fill="#FFCE00"/></svg></span> GER</li>
         </ul>
       </div>
       <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema día/noche" title="Día / Noche">
@@ -773,11 +774,19 @@
   var saved=null;try{saved=localStorage.getItem("lupo-lang");}catch(e){}
   var lang=(LANGS.indexOf(saved)>=0)?saved:((navigator.language||"es").slice(0,2).toLowerCase());
   if(LANGS.indexOf(lang)<0)lang="es";
-  var META={es:{f:"🇪🇸",c:"ESP"},en:{f:"🇬🇧",c:"ENG"},pt:{f:"🇵🇹",c:"POR"},it:{f:"🇮🇹",c:"ITA"},fr:{f:"🇫🇷",c:"FRA"},de:{f:"🇩🇪",c:"GER"}};
+  var FLAGS={
+    es:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#c60b1e"/><rect y="4.5" width="24" height="9" fill="#ffc400"/></svg>',
+    en:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#012169"/><path d="M0 0L24 18M24 0L0 18" stroke="#fff" stroke-width="3.6"/><path d="M0 0L24 18M24 0L0 18" stroke="#C8102E" stroke-width="2"/><rect x="9.6" width="4.8" height="18" fill="#fff"/><rect y="6.6" width="24" height="4.8" fill="#fff"/><rect x="10.8" width="2.4" height="18" fill="#C8102E"/><rect y="7.8" width="24" height="2.4" fill="#C8102E"/></svg>',
+    pt:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#da291c"/><rect width="9.6" height="18" fill="#046a38"/><circle cx="9.6" cy="9" r="2.6" fill="#ffc400" stroke="#fff" stroke-width=".6"/></svg>',
+    it:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#fff"/><rect width="8" height="18" fill="#008C45"/><rect x="16" width="8" height="18" fill="#CD212A"/></svg>',
+    fr:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#fff"/><rect width="8" height="18" fill="#0055A4"/><rect x="16" width="8" height="18" fill="#EF4135"/></svg>',
+    de:'<svg viewBox="0 0 24 18"><rect width="24" height="18" fill="#000"/><rect y="6" width="24" height="6" fill="#DD0000"/><rect y="12" width="24" height="6" fill="#FFCE00"/></svg>'
+  };
+  var META={es:{c:"ESP"},en:{c:"ENG"},pt:{c:"POR"},it:{c:"ITA"},fr:{c:"FRA"},de:{c:"GER"}};
   var langBox=document.getElementById("lang"),langBtn=document.getElementById("langBtn"),langMenu=document.getElementById("langMenu"),langFlag=document.getElementById("langFlag"),langCode=document.getElementById("langCode");
   function setLang(l,persist){
     lang=l;
-    if(langFlag)langFlag.textContent=META[l].f;
+    if(langFlag)langFlag.innerHTML=FLAGS[l];
     if(langCode)langCode.textContent=META[l].c;
     if(langMenu)langMenu.querySelectorAll(".lang-opt").forEach(function(o){o.classList.toggle("active",o.getAttribute("data-lang")===l);});
     if(persist){try{localStorage.setItem("lupo-lang",l);}catch(e){}}
