@@ -210,6 +210,22 @@ export default function App() {
   }, [sesion]);
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+  // Tiempo real: cuando alguien del equipo carga/edita/borra algo, se recarga
+  // solo para todos (sin apretar F5). Debounce para no recargar de más.
+  useEffect(() => {
+    if (!sesion) return;
+    let t;
+    const refrescar = () => { clearTimeout(t); t = setTimeout(() => cargarDatos(), 400); };
+    const canal = supabase
+      .channel("leadadmin-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "empresas_activas" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "interacciones_crm" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reporte_mensual" }, refrescar)
+      .subscribe();
+    return () => { clearTimeout(t); supabase.removeChannel(canal); };
+  }, [sesion, cargarDatos]);
+
   if (cargando) return <Centro><p style={{ color: T.muted }}>Cargando…</p></Centro>;
   if (!sesion) return <Login {...temaProps} />;
   if (!sesion.perfil) return <Centro><p style={{ color: T.red }}>No se encontró el perfil del usuario.</p></Centro>;
