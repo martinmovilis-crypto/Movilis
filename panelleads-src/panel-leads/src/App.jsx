@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  LineChart, Line, XAxis, YAxis,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  PieChart, Pie, Cell,
 } from "recharts";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 import { LOGO } from "./logo";
@@ -24,15 +23,14 @@ function exportarExcel({ leads, empresas, resumen, conVendedor, archivo }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(empRows), "Empresas activas");
   }
   if (resumen) {
-    const r = resumen.map((d) => {
-      const row = { Mes: d.label };
-      MEDIOS.forEach((c) => (row[c.label] = d[c.key] ?? 0));
-      row["Leads corporativos"] = d.corp; row["Leads particulares"] = d.part;
-      row.Total = d.total;
-      row["Inversión"] = d.inv ?? 0;
-      row["Costo por lead"] = d.costo ?? 0; row["Costo por lead particular"] = d.costoPart ?? 0; row["Costo por lead corpo"] = d.costoCorp ?? 0;
-      return row;
-    });
+    const r = resumen.map((d) => ({
+      Mes: d.label,
+      Info: d.info, "Mail corpo": d.mail_corpo, "Waalaxy/FML": d.waalaxy_fml,
+      "Tablet part.": d.tablet_part, "Tablet corpo": d.tablet_corpo,
+      Corporativos: d.corp, Particulares: d.part, Total: d.total,
+      "Interac. CRM": d.crm, Inversión: d.inv,
+      "Costo total": d.costo, "Costo particular": d.costoPart, "Costo corpo": d.costoCorp,
+    }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r), "Resumen mensual");
   }
   XLSX.writeFile(wb, archivo);
@@ -56,12 +54,11 @@ const FONT = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helve
 
 // ── Medios (canal por el que se consiguió el lead) ───────────────────
 const MEDIOS = [
-  { key: "leadsInfo",          label: "Leads particulares info", grupo: "part", kw: ["leads particulares info", "particulares info", "leads info"] },
-  { key: "infoRenting",        label: "info@renting",            grupo: "corp", kw: ["info renting", "info@renting", "renting"] },
-  { key: "waalax",             label: "LinkedIn",                grupo: "corp", kw: ["linkedin seba", "linkedin", "seba", "walaxi/fml", "walaxi", "waalax", "walax", "fml"] },
-  { key: "particularesDarwin", label: "Darwin particulares",     grupo: "part", kw: ["particulares darwin", "darwin particulares", "particular darwin", "particulares", "darwin"] },
-  { key: "empresasDarwin",     label: "Empresas Darwin",         grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
-  { key: "emailsDerivar",      label: "Presupuestos corporativos", grupo: "corp", kw: ["presupuestos corporativos", "presupuesto corporativo", "emails derivar", "email derivar", "derivar", "front"] },
+  { key: "infoRenting",        label: "Info Renting",          grupo: "part", kw: ["info renting", "renting"] },
+  { key: "waalax",             label: "LinkedIn / Walaxy-FML", grupo: "corp", kw: ["linkedin seba", "linkedin", "seba", "walaxi/fml", "walaxi", "waalax", "walax", "fml"] },
+  { key: "empresasDarwin",     label: "Empresas Darwin",       grupo: "corp", kw: ["empresas darwin", "empresa darwin", "empresas"] },
+  { key: "particularesDarwin", label: "Particulares Darwin",   grupo: "part", kw: ["particulares darwin", "particular darwin", "particulares", "darwin"] },
+  { key: "emailsDerivar",      label: "Emails Derivar (front)",grupo: "corp", kw: ["emails derivar", "email derivar", "derivar", "front"] },
 ];
 const MED = MEDIOS.reduce((a, c) => ((a[c.key] = c), a), {});
 const grupoDe = (k) => MED[k]?.grupo;
@@ -70,28 +67,20 @@ const PART_KEYS = MEDIOS.filter((m) => m.grupo === "part").map((m) => m.key);
 const CORP_KEYS = MEDIOS.filter((m) => m.grupo === "corp").map((m) => m.key);
 
 // ── Meses ────────────────────────────────────────────────────────────
-const LABELS_MES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-// Años elegibles al editar la fecha de un lead (histórico viejo incluido)
-const ANIOS_EDIT = (() => { const r = []; for (let y = 2020; y <= new Date().getFullYear(); y++) r.push(String(y)); return r; })();
-function generarMeses() {
-  const hoy = new Date();
-  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() >= 15 ? 1 : 0), 1);
-  const result = [];
-  let y = 2026, m = 6;
-  while (y < fin.getFullYear() || (y === fin.getFullYear() && m <= fin.getMonth() + 1)) {
-    result.push({ key: `${y}-${String(m).padStart(2,"0")}`, label: `${LABELS_MES[m-1]} ${y}` });
-    if (++m > 12) { m = 1; y++; }
-  }
-  return result;
-}
-const MESES = generarMeses();
-const MES_ACTUAL = MESES[MESES.length - 1]?.key ?? "2026-06";
-// Desde este mes en adelante el tablero cuenta leads reales cargados por los
-// vendedores. Los meses anteriores conservan el histórico viejo (reporte_mensual).
-const CORTE_REAL = "2026-06";
+const MESES = [
+  { key: "2025-01", label: "Ene 2025" }, { key: "2025-02", label: "Feb 2025" },
+  { key: "2025-03", label: "Mar 2025" }, { key: "2025-04", label: "Abr 2025" },
+  { key: "2025-05", label: "May 2025" }, { key: "2025-06", label: "Jun 2025" },
+  { key: "2025-07", label: "Jul 2025" }, { key: "2025-08", label: "Ago 2025" },
+  { key: "2025-09", label: "Sep 2025" }, { key: "2025-10", label: "Oct 2025" },
+  { key: "2025-11", label: "Nov 2025" }, { key: "2025-12", label: "Dic 2025" },
+  { key: "2026-01", label: "Ene 2026" }, { key: "2026-02", label: "Feb 2026" },
+  { key: "2026-03", label: "Mar 2026" }, { key: "2026-04", label: "Abr 2026" },
+  { key: "2026-05", label: "May 2026" }, { key: "2026-06", label: "Jun 2026" },
+];
 const nf = new Intl.NumberFormat("es-AR");
 const cf = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-const labelDe = (k) => { const [y, m] = String(k || "").split("-"); const lb = LABELS_MES[Number(m) - 1]; return lb ? `${lb} ${y}` : k; };
+const labelDe = (k) => MESES.find((m) => m.key === k)?.label ?? k;
 
 function contarPorMes(leadsArr) {
   return MESES.map((m) => {
@@ -178,7 +167,7 @@ export default function App() {
 
   const [cargando, setCargando] = useState(true);
   const [sesion, setSesion] = useState(null);
-  const [datos, setDatos] = useState({ leads: [], crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
+  const [datos, setDatos] = useState({ leads: [], inversion: {}, crm: {}, vendedores: [], usuarios: [], empresas: [], reporte: {} });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => manejarSesion(data.session));
@@ -197,20 +186,22 @@ export default function App() {
   const cargarDatos = useCallback(async () => {
     if (!sesion) return;
     const full = sesion.perfil?.rol === "jefe" || sesion.perfil?.rol === "admin";
-    const [{ data: leads }, { data: crm }, { data: profs }, { data: emp }, { data: rep }] = await Promise.all([
-      supabase.from("leads").select("id,nombre,contacto,medio,operador,cotizada,mes,vendedor_id").order("created_at", { ascending: false }),
-      supabase.from("interacciones_crm").select("vendedor_id,mes,cantidad"),
+    const [{ data: leads }, { data: inv }, { data: crm }, { data: profs }, { data: emp }, { data: rep }] = await Promise.all([
+      supabase.from("leads").select("*").order("created_at", { ascending: false }),
+      supabase.from("inversion").select("*"),
+      supabase.from("interacciones_crm").select("*"),
       full ? supabase.from("profiles").select("id,nombre,apellido,usuario,email,rol") : Promise.resolve({ data: [sesion.perfil] }),
-      supabase.from("empresas_activas").select("id,nombre,contactos,cuit,unidades,presupuestos_nuevos,vendedor_id").order("created_at", { ascending: false }),
+      supabase.from("empresas_activas").select("*").order("created_at", { ascending: false }),
       full ? supabase.from("reporte_mensual").select("*") : Promise.resolve({ data: [] }),
     ]);
     const mapaNombre = {};
     (profs || []).forEach((p) => (mapaNombre[p.id] = `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim()));
+    const invMap = {}; (inv || []).forEach((r) => (invMap[r.mes] = Number(r.monto)));
     const crmMap = {}; (crm || []).forEach((r) => (crmMap[`${r.vendedor_id}::${r.mes}`] = r.cantidad));
     const repMap = {}; (rep || []).forEach((r) => (repMap[r.mes] = r));
     setDatos({
       leads: (leads || []).map((l) => ({ ...l, vendedorNombre: mapaNombre[l.vendedor_id] || "—" })),
-      crm: crmMap,
+      inversion: invMap, crm: crmMap,
       vendedores: (profs || []).filter((p) => p.rol === "ventas").map((p) => ({ id: p.id, nombre: `${p.nombre ?? ""} ${p.apellido ?? ""}`.trim() })),
       usuarios: profs || [],
       empresas: (emp || []).map((e) => ({ ...e, vendedorNombre: mapaNombre[e.vendedor_id] || "—" })),
@@ -219,10 +210,26 @@ export default function App() {
   }, [sesion]);
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+  // Tiempo real: cuando alguien del equipo carga/edita/borra algo, se recarga
+  // solo para todos (sin apretar F5). Debounce para no recargar de más.
+  useEffect(() => {
+    if (!sesion) return;
+    let t;
+    const refrescar = () => { clearTimeout(t); t = setTimeout(() => cargarDatos(), 400); };
+    const canal = supabase
+      .channel("leadadmin-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "leads" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "empresas_activas" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "interacciones_crm" }, refrescar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reporte_mensual" }, refrescar)
+      .subscribe();
+    return () => { clearTimeout(t); supabase.removeChannel(canal); };
+  }, [sesion, cargarDatos]);
+
   if (cargando) return <Centro><p style={{ color: T.muted }}>Cargando…</p></Centro>;
   if (!sesion) return <Login {...temaProps} />;
   if (!sesion.perfil) return <Centro><p style={{ color: T.red }}>No se encontró el perfil del usuario.</p></Centro>;
-  const props = { sesion, datos, recargar: cargarDatos, mutar: setDatos, salir: () => supabase.auth.signOut(), ...temaProps };
+  const props = { sesion, datos, recargar: cargarDatos, salir: () => supabase.auth.signOut(), ...temaProps };
   const full = sesion.perfil.rol === "jefe" || sesion.perfil.rol === "admin";
   return full ? <PanelJefe {...props} /> : <PanelVentas {...props} />;
 }
@@ -404,14 +411,8 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
   useEffect(() => { setPag((p) => Math.min(p, totalPags - 1)); }, [totalPags]);
   const visibles = filas.slice(pag * tope, pag * tope + tope);
   const ei = { width: "100%", border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, outline: "none" };
-  const ANIOS = ANIOS_EDIT;
-  function abrir(l) {
-    const [anio, numMes] = (l.mes || "").split("-");
-    setEditId(l.id);
-    setD({ nombre: l.nombre || "", contacto: l.contacto || "", medio: l.medio, operador: l.operador || "", cotizada: !!l.cotizada, anio: anio || "2025", numMes: numMes || "01" });
-  }
-  function mesKey() { return `${d.anio}-${d.numMes}`; }
-  function guardar() { onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: mesKey() }); setEditId(null); }
+  function abrir(l) { setEditId(l.id); setD({ nombre: l.nombre || "", contacto: l.contacto || "", medio: l.medio, operador: l.operador || "", cotizada: !!l.cotizada, mes: l.mes }); }
+  async function guardar() { await onSave(editId, { nombre: d.nombre.trim() || null, contacto: d.contacto.trim() || null, medio: d.medio, operador: (d.operador || "").trim() || null, cotizada: d.cotizada, mes: d.mes }); setEditId(null); }
   const acc = onSave || onDelete;
   return (
     <Card style={{ padding: 20, overflowX: "auto" }}>
@@ -420,7 +421,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
         <thead><tr style={{ color: T.muted, textAlign: "left" }}>
           <th className="py-2" style={{ fontWeight: 600 }}>Nombre</th><th className="py-2" style={{ fontWeight: 600 }}>Contacto</th>
           <th className="py-2" style={{ fontWeight: 600 }}>Medio</th><th className="py-2" style={{ fontWeight: 600 }}>Asesor</th><th className="py-2" style={{ fontWeight: 600 }}>Cotizada</th>
-          {conVendedor && <th className="py-2" style={{ fontWeight: 600 }}>Vendedor</th>}<th className="py-2" style={{ fontWeight: 600 }}>Año</th><th className="py-2" style={{ fontWeight: 600 }}>Mes</th>
+          {conVendedor && <th className="py-2" style={{ fontWeight: 600 }}>Vendedor</th>}<th className="py-2" style={{ fontWeight: 600 }}>Mes</th>
           {acc && <th></th>}
         </tr></thead>
         <tbody>{visibles.map((l) => editId === l.id ? (
@@ -431,8 +432,7 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
             <td className="py-2"><input value={d.operador} onChange={(e) => setD({ ...d, operador: e.target.value })} style={ei} placeholder="—" /></td>
             <td className="py-2"><select value={d.cotizada ? "si" : "no"} onChange={(e) => setD({ ...d, cotizada: e.target.value === "si" })} style={ei}><option value="no">No</option><option value="si">Sí</option></select></td>
             {conVendedor && <td className="py-2" style={{ color: T.muted }}>{l.vendedorNombre}</td>}
-            <td className="py-2"><select value={d.anio} onChange={(e) => setD({ ...d, anio: e.target.value })} style={{ ...ei, width: 72 }}>{ANIOS.map((a) => <option key={a} value={a}>{a}</option>)}</select></td>
-            <td className="py-2"><select value={d.numMes} onChange={(e) => setD({ ...d, numMes: e.target.value })} style={{ ...ei, width: 68 }}>{LABELS_MES.map((lb, i) => { const v = String(i+1).padStart(2,"0"); return <option key={v} value={v}>{lb}</option>; })}</select></td>
+            <td className="py-2"><select value={d.mes} onChange={(e) => setD({ ...d, mes: e.target.value })} style={ei}>{MESES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}</select></td>
             <td className="py-2" style={{ whiteSpace: "nowrap" }}>
               <button onClick={guardar} style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 13, fontWeight: 700 }}>✓</button>
               <button onClick={() => setEditId(null)} style={{ border: "none", background: "transparent", color: T.muted, cursor: "pointer", fontSize: 14, marginLeft: 4 }}>×</button>
@@ -442,10 +442,10 @@ function ListaLeads({ filas, conVendedor, onDelete, onSave, tope = 50 }) {
           <tr key={l.id} style={{ borderTop: `1px solid ${T.line}` }}>
             <td className="py-2">{l.nombre || <span style={{ color: T.muted }}>—</span>}</td>
             <td className="py-2">{l.contacto || <span style={{ color: T.muted }}>sin contacto</span>}</td>
-            <td className="py-2"><span style={{ color: colorDe(l.medio), fontWeight: 600 }}>{MED[l.medio]?.label || l.medio}</span></td>
+            <td className="py-2"><span style={{ color: colorDe(l.medio), fontWeight: 600 }}>{MED[l.medio]?.label}</span></td>
             <td className="py-2">{l.operador || <span style={{ color: T.muted }}>—</span>}</td>
             <td className="py-2">{l.cotizada ? <span style={{ color: T.green, fontWeight: 700 }}>Sí</span> : <span style={{ color: T.muted }}>No</span>}</td>
-            {conVendedor && <td className="py-2">{l.vendedorNombre}</td>}<td className="py-2" style={{ color: T.muted, fontSize: 12 }}>{(l.mes || "").slice(0,4)}</td><td className="py-2">{LABELS_MES[Number((l.mes||"").slice(5,7))-1]}</td>
+            {conVendedor && <td className="py-2">{l.vendedorNombre}</td>}<td className="py-2">{labelDe(l.mes)}</td>
             {acc && <td className="py-2" style={{ whiteSpace: "nowrap" }}>
               {onSave && <button onClick={() => abrir(l)} style={{ border: "none", background: "transparent", color: T.blue, cursor: "pointer", fontSize: 13 }}>✏️</button>}
               {onDelete && <button onClick={() => onDelete(l.id)} style={{ border: "none", background: "transparent", color: T.red, cursor: "pointer", fontSize: 14, marginLeft: 4 }}>🗑</button>}
@@ -478,7 +478,7 @@ function TablaEmpresas({ filas, conVendedor, onDelete, onSave }) {
   const [d, setD] = useState({});
   const ei = { width: "100%", border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, outline: "none" };
   function abrir(e) { setEditId(e.id); setD({ nombre: e.nombre || "", contactos: e.contactos || "", cuit: e.cuit || "", unidades: e.unidades, presupuestos_nuevos: e.presupuestos_nuevos }); }
-  function guardar() { onSave(editId, { nombre: d.nombre.trim(), contactos: d.contactos.trim() || null, cuit: d.cuit.trim() || null, unidades: Number(d.unidades) || 0, presupuestos_nuevos: Number(d.presupuestos_nuevos) || 0 }); setEditId(null); }
+  async function guardar() { await onSave(editId, { nombre: d.nombre.trim(), contactos: d.contactos.trim() || null, cuit: d.cuit.trim() || null, unidades: Number(d.unidades) || 0, presupuestos_nuevos: Number(d.presupuestos_nuevos) || 0 }); setEditId(null); }
   const acc = onSave || onDelete;
   return (
     <Card style={{ padding: 20, overflowX: "auto" }}>
@@ -526,10 +526,10 @@ function TablaEmpresas({ filas, conVendedor, onDelete, onSave }) {
 }
 
 // ── PANEL VENTAS ─────────────────────────────────────────────────────
-function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema }) {
+function PanelVentas({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const yoId = sesion.user.id;
   const [vista, setVista] = useState("cargar");
-  const [mesSel, setMesSel] = useState(MES_ACTUAL);
+  const [mesSel, setMesSel] = useState("2026-06");
   const [defMedio, setDefMedio] = useState("");
   const [texto, setTexto] = useState("");
   const [preview, setPreview] = useState([]);
@@ -582,28 +582,10 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
     flash(setAvisoEmp, "Empresa cargada.");
     setEmp({ nombre: "", contactos: "", cuit: "", unidades: "", presupuestos_nuevos: "" }); recargar();
   }
-  async function guardarLeadEdit(id, patch) {
-    mutar((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
-    const { error } = await supabase.from("leads").update(patch).eq("id", id);
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
-  }
-  async function guardarEmpresaEdit(id, patch) {
-    mutar((d) => ({ ...d, empresas: d.empresas.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
-    const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
-  }
-  async function borrarLead(id) {
-    if (!confirm("¿Borrar este lead?")) return;
-    mutar((d) => ({ ...d, leads: d.leads.filter((l) => l.id !== id) }));
-    const { error } = await supabase.from("leads").delete().eq("id", id);
-    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
-  }
-  async function borrarEmpresa(id) {
-    if (!confirm("¿Borrar esta empresa?")) return;
-    mutar((d) => ({ ...d, empresas: d.empresas.filter((e) => e.id !== id) }));
-    const { error } = await supabase.from("empresas_activas").delete().eq("id", id);
-    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
-  }
+  async function guardarLeadEdit(id, patch) { const { error } = await supabase.from("leads").update(patch).eq("id", id); if (!error) recargar(); }
+  async function guardarEmpresaEdit(id, patch) { const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id); if (!error) recargar(); }
+  async function borrarLead(id) { if (!confirm("¿Borrar este lead?")) return; await supabase.from("leads").delete().eq("id", id); recargar(); }
+  async function borrarEmpresa(id) { if (!confirm("¿Borrar esta empresa?")) return; await supabase.from("empresas_activas").delete().eq("id", id); recargar(); }
 
   const previewPart = preview.filter((p) => grupoDe(p.medio) === "part").length;
   const previewCorp = preview.filter((p) => grupoDe(p.medio) === "corp").length;
@@ -613,7 +595,6 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
   const misLeadsTodos = useMemo(() => datos.leads.filter((l) => l.vendedor_id === yoId), [datos.leads, yoId]);
   const miResumen = useMemo(() => contarPorMes(misLeadsTodos), [misLeadsTodos]);
   const miHistLista = useMemo(() => misLeadsTodos.filter((l) => fHmes === "todos" || l.mes === fHmes), [misLeadsTodos, fHmes]);
-  const mesesFiltro = useMemo(() => { const s = new Set(MESES.map((m) => m.key)); misLeadsTodos.forEach((l) => l.mes && s.add(l.mes)); return Array.from(s).sort(); }, [misLeadsTodos]);
   const misEmpresas = datos.empresas.filter((e) => e.vendedor_id === yoId);
 
   return (
@@ -658,7 +639,7 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
                         ))}</tbody>
                       </table>
                     </div>
-                    <button disabled={busy} onClick={confirmar} className="mt-3 w-full py-3" style={{ background: T.ink, color: T.paper, border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Guardando…" : `Confirmar ${preview.length} leads`}</button>
+                    <button disabled={busy} onClick={confirmar} className="mt-3 w-full py-3" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>{busy ? "Guardando…" : `Confirmar ${preview.length} leads`}</button>
                   </>
                 )}
               </Card>
@@ -712,7 +693,7 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
               { head: "Mis interac. CRM", render: (d) => nf.format(datos.crm[`${yoId}::${d.key}`] || 0) },
             ]} />
             <Card style={{ padding: 14 }}>
-              <div style={{ maxWidth: 220 }}><Field label="Filtrar por mes"><Select value={fHmes} onChange={setFHmes} options={[["todos", "Todos los meses"], ...mesesFiltro.map((k) => [k, labelDe(k)])]} /></Field></div>
+              <div style={{ maxWidth: 220 }}><Field label="Filtrar por mes"><Select value={fHmes} onChange={setFHmes} options={[["todos", "Todos los meses"], ...MESES.map((m) => [m.key, m.label])]} /></Field></div>
             </Card>
             <ListaLeads filas={miHistLista} conVendedor={false} onSave={guardarLeadEdit} onDelete={borrarLead} />
           </div>
@@ -723,68 +704,47 @@ function PanelVentas({ sesion, datos, recargar, mutar, salir, tema, cambiarTema 
 }
 
 // ── PANEL JEFE / ADMIN ───────────────────────────────────────────────
-function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema }) {
+function PanelJefe({ sesion, datos, recargar, salir, tema, cambiarTema }) {
   const esAdmin = sesion.perfil.rol === "admin";
   const tip = { background: T.card, border: `1px solid ${T.line}`, borderRadius: 10, fontSize: 12, color: T.ink };
   const [vista, setVista] = useState("tablero");
-  const [promoEdit, setPromoEdit] = useState({});
-  const [mesTab, setMesTab] = useState(MES_ACTUAL);
+  const [mesInv, setMesInv] = useState("2026-05");
+  const [montoInv, setMontoInv] = useState("");
+  const [avisoInv, setAvisoInv] = useState("");
   const [fMes, setFMes] = useState("todos");
   const [fMed, setFMed] = useState("todos");
   const [fVend, setFVend] = useState("todos");
   const [fAsesor, setFAsesor] = useState("todos");
   const [graf, setGraf] = useState("part");
+  const [busy, setBusy] = useState(false);
   const [avisoU, setAvisoU] = useState("");
   const hoy = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" });
   function flash(s, m) { s(m); setTimeout(() => s(""), 3500); }
 
-  async function guardarInv(mes) {
-    // Inversión editada directamente en la celda del cuadro (valor absoluto).
-    const k = `${mes}::inversion`;
-    const v = Number(promoEdit[k]) || 0;
-    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, inversion: v } } }));
-    setPromoEdit((p) => { const n = { ...p }; delete n[k]; return n; });
-    const { error } = await supabase.from("reporte_mensual").upsert({ mes, inversion: v, updated_at: new Date().toISOString() }, { onConflict: "mes" });
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
+  async function guardarInversion() {
+    if (!montoInv) return flash(setAvisoInv, "Ingresá un monto.");
+    setBusy(true);
+    const { error } = await supabase.from("reporte_mensual").upsert({ mes: mesInv, inversion: Number(montoInv) || 0, updated_at: new Date().toISOString() }, { onConflict: "mes" });
+    setBusy(false);
+    if (error) return flash(setAvisoInv, "Error: " + error.message);
+    flash(setAvisoInv, `Inversión actualizada · ${labelDe(mesInv)}`); setMontoInv(""); recargar();
   }
   async function borrarLead(id) {
     if (!confirm("¿Borrar este lead?")) return;
-    mutar((d) => ({ ...d, leads: d.leads.filter((l) => l.id !== id) }));
-    const { error } = await supabase.from("leads").delete().eq("id", id);
-    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
+    await supabase.from("leads").delete().eq("id", id); recargar();
   }
   async function borrarEmpresa(id) {
     if (!confirm("¿Borrar esta empresa?")) return;
-    mutar((d) => ({ ...d, empresas: d.empresas.filter((e) => e.id !== id) }));
-    const { error } = await supabase.from("empresas_activas").delete().eq("id", id);
-    if (error) { alert("No se pudo borrar: " + error.message); recargar(); }
+    await supabase.from("empresas_activas").delete().eq("id", id); recargar();
   }
-  async function guardarLeadEdit(id, patch) {
-    mutar((d) => ({ ...d, leads: d.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) }));
-    const { error } = await supabase.from("leads").update(patch).eq("id", id);
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
-  }
-  async function guardarEmpresaEdit(id, patch) {
-    mutar((d) => ({ ...d, empresas: d.empresas.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
-    const { error } = await supabase.from("empresas_activas").update(patch).eq("id", id);
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
-  }
-  async function guardarAjuste(mes, campo, real) {
-    // El jefe escribe el total del mes; guardamos la diferencia con lo contado
-    // de leads reales como ajuste manual (reporte_mensual.leads_part / leads_corp).
-    const k = `${mes}::${campo}`;
-    const extra = (Number(promoEdit[k]) || 0) - real;
-    mutar((d) => ({ ...d, reporte: { ...d.reporte, [mes]: { ...(d.reporte[mes] || {}), mes, [campo]: extra } } }));
-    setPromoEdit((p) => { const n = { ...p }; delete n[k]; return n; });
-    const { error } = await supabase.from("reporte_mensual").upsert({ mes, [campo]: extra, updated_at: new Date().toISOString() }, { onConflict: "mes" });
-    if (error) { alert("No se pudo guardar: " + error.message); recargar(); }
-  }
+  async function guardarLeadEdit(id, patch) { await supabase.from("leads").update(patch).eq("id", id); recargar(); }
+  async function guardarEmpresaEdit(id, patch) { await supabase.from("empresas_activas").update(patch).eq("id", id); recargar(); }
   async function cambiarRol(id, rol) {
     await supabase.from("profiles").update({ rol }).eq("id", id);
     flash(setAvisoU, "Rol actualizado. La persona lo verá al volver a entrar."); recargar();
   }
   async function borrarUsuario(id, nombre) {
-    if (!confirm(`¿Borrar a ${nombre}? Sus leads quedan en la base sin asignar (se pueden reclamar al re-registrarse).`)) return;
+    if (!confirm(`¿Borrar a ${nombre}? Se eliminan también todos sus datos.`)) return;
     const { data: s } = await supabase.auth.getSession();
     const token = s?.session?.access_token;
     const res = await fetch(`${SUPABASE_URL}/functions/v1/borrar_usuario`, {
@@ -796,55 +756,35 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
 
   const data = useMemo(() => MESES.map((m) => {
     const r = datos.reporte[m.key] || {};
+    const info = Number(r.info) || 0;
+    const tablet_part = Number(r.tablet_part) || 0;
+    const mail_corpo = Number(r.mail_corpo) || 0;
+    const waalaxy_fml = Number(r.waalaxy_fml) || 0;
+    const tablet_corpo = Number(r.tablet_corpo) || 0;
+    const part = info + tablet_part;
+    const corp = mail_corpo + waalaxy_fml + tablet_corpo;
+    const total = part + corp;
     const inv = Number(r.inversion) || 0;
-    // Meses anteriores al corte: se muestra el histórico viejo tal cual estaba
-    // cargado (reporte_mensual). Desde el corte en adelante: leads reales.
     const crmTotal = datos.vendedores.reduce((a, v) => a + (datos.crm[`${v.id}::${m.key}`] || 0), 0);
-    const o = { key: m.key, label: m.label, inv, crm: crmTotal };
-    if (m.key < CORTE_REAL) {
-      MEDIOS.forEach((c) => (o[c.key] = 0));
-      o.part = Number(r.leads_part) || 0;
-      o.corp = Number(r.leads_corp) || 0;
-      o.historico = true;
-    } else {
-      const mesLeads = datos.leads.filter((l) => l.mes === m.key);
-      MEDIOS.forEach((c) => (o[c.key] = mesLeads.filter((l) => l.medio === c.key).length));
-      // Ajuste manual del jefe sobre los leads particulares (se suma a los contados).
-      // Desde el corte, reporte_mensual.leads_part guarda ese ajuste.
-      o.extraPart = Number(r.leads_part) || 0;
-      o.partReal = PART_KEYS.reduce((a, k) => a + o[k], 0);
-      o.part = o.partReal + o.extraPart;
-      o.extraCorp = Number(r.leads_corp) || 0;
-      o.corpReal = CORP_KEYS.reduce((a, k) => a + o[k], 0);
-      o.corp = o.corpReal + o.extraCorp;
-    }
-    o.total = o.part + o.corp;
-    o.costo = o.total ? Math.round(inv / o.total) : 0;
-    o.costoPart = o.part ? Math.round(inv / o.part) : 0;
-    o.costoCorp = o.corp ? Math.round(inv / o.corp) : 0;
-    return o;
+    return {
+      key: m.key, label: m.label,
+      info, mail_corpo, waalaxy_fml, tablet_part, tablet_corpo,
+      part, corp, total, inv, crm: crmTotal,
+      costo: total ? Math.round(inv / total) : 0,
+      costoPart: part ? Math.round(inv / part) : 0,
+      costoCorp: corp ? Math.round(inv / corp) : 0,
+    };
   }), [datos]);
   const conMov = data.filter((d) => d.total > 0 || d.inv > 0);
-  // Los KPI muestran el mes elegido en el filtro de fecha del tablero
-  const ult = data.find((d) => d.key === mesTab) || data[data.length - 1];
+  const ult = conMov[conMov.length - 1] || data[data.length - 1];
   const idxUlt = data.findIndex((d) => d.key === ult.key);
   const prev = idxUlt > 0 ? data[idxUlt - 1] : null;
   const deltaCosto = prev?.costo ? ((ult.costo - prev.costo) / prev.costo) * 100 : 0;
-  const cotizadasMes = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada && l.mes === ult.key ? 1 : 0), 0), [datos.leads, ult.key]);
-  // Desglose por medio del mes elegido, para los gráficos de particulares/corporativos
-  const desglose = useMemo(() => {
-    // Corporativos: solo info@renting, LinkedIn y Empresas Darwin (sin presupuestos ni ajuste)
-    const keys = graf === "part" ? PART_KEYS : CORP_KEYS.filter((k) => k !== "emailsDerivar");
-    const rows = keys.map((k) => ({ label: MED[k].label, cantidad: ult[k] || 0 }));
-    if (graf === "part" && ult.extraPart) rows.push({ label: "Leads particulares", cantidad: ult.extraPart });
-    const conDatos = rows.filter((r) => r.cantidad > 0);
-    return conDatos.length ? conDatos : rows;
-  }, [graf, ult]);
+  const totalCotizadas = useMemo(() => datos.leads.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [datos.leads]);
 
   const filtrados = useMemo(() => datos.leads.filter((l) => (fMes === "todos" || l.mes === fMes) && (fMed === "todos" || l.medio === fMed) && (fVend === "todos" || l.vendedor_id === fVend) && (fAsesor === "todos" || l.operador === fAsesor)), [datos.leads, fMes, fMed, fVend, fAsesor]);
   const cotizadasFiltradas = useMemo(() => filtrados.reduce((a, l) => a + (l.cotizada ? 1 : 0), 0), [filtrados]);
   const asesores = useMemo(() => Array.from(new Set(datos.leads.map((l) => l.operador).filter(Boolean))).sort(), [datos.leads]);
-  const mesesFiltro = useMemo(() => { const s = new Set(MESES.map((m) => m.key)); datos.leads.forEach((l) => l.mes && s.add(l.mes)); return Array.from(s).sort(); }, [datos.leads]);
   const filtCount = useMemo(() => { const c = {}; filtrados.forEach((l) => (c[l.medio] = (c[l.medio] || 0) + 1)); return c; }, [filtrados]);
   const empFiltradas = useMemo(() => datos.empresas.filter((e) => fVend === "todos" || e.vendedor_id === fVend), [datos.empresas, fVend]);
 
@@ -859,11 +799,8 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
 
         {vista === "tablero" && (
           <div className="mt-6 grid gap-4">
-            <div className="no-print flex flex-wrap items-end justify-between gap-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <div style={{ minWidth: 170 }}><Field label="Ver datos de"><Select value={mesTab} onChange={setMesTab} options={MESES.map((m) => [m.key, m.label])} /></Field></div>
-                <span style={{ fontSize: 13, color: T.muted, paddingBottom: 10 }}>Reporte de leads · {ult.label}</span>
-              </div>
+            <div className="no-print flex flex-wrap items-center justify-between gap-3">
+              <span style={{ fontSize: 13, color: T.muted }}>Reporte de leads · {ult.label}</span>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => exportarExcel({ resumen: conMov, archivo: `reporte-mensual-${ult.key}.xlsx` })} className="py-2.5 px-4" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar Excel</button>
                 <button onClick={() => window.print()} className="py-2.5 px-4" style={{ background: T.blue, color: "#fff", border: "none", borderRadius: 10, fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>Descargar PDF</button>
@@ -875,33 +812,29 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
               <Kpi label="Costo / lead total" value={cf.format(ult.costo)} sub={ult.label} accent={T.green} delta={prev ? deltaCosto : null} />
               <Kpi label="Costo / lead particular" value={cf.format(ult.costoPart)} sub={`${nf.format(ult.part)} leads`} accent={T.blue} />
               <Kpi label="Costo / lead corporativo" value={cf.format(ult.costoCorp)} sub={`${nf.format(ult.corp)} leads`} accent={T.gold} />
-              <Kpi label="Cotizaciones" value={nf.format(cotizadasMes)} sub={`cotizadas · ${ult.label}`} accent={T.teal} />
-              <Kpi label="Presupuestos corporativos" value={nf.format(ult.emailsDerivar || 0)} sub={ult.label} accent="#7c3aed" />
+              <Kpi label="Cotizaciones" value={nf.format(totalCotizadas)} sub="total cotizadas" accent={T.teal} />
             </div>
+            <Card className="no-print" style={{ padding: 18 }}>
+              <div className="flex flex-wrap items-end gap-3">
+                <div style={{ flex: "1 1 160px" }}><Field label="Mes"><Select value={mesInv} onChange={setMesInv} options={MESES.map((m) => [m.key, m.label])} /></Field></div>
+                <div style={{ flex: "1 1 200px" }}><Field label="Inversión del mes (ARS)"><Txt value={montoInv} onChange={setMontoInv} type="number" placeholder={String((datos.reporte[mesInv] && datos.reporte[mesInv].inversion) || 0)} /></Field></div>
+                <button disabled={busy} onClick={guardarInversion} className="py-3 px-5" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: busy ? 0.6 : 1 }}>Actualizar inversión</button>
+                {avisoInv && <span style={{ color: T.teal, fontSize: 13, fontWeight: 600 }}>{avisoInv}</span>}
+              </div>
+            </Card>
             <Card style={{ padding: 18 }}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: 9, background: graf === "inv" ? T.teal : graf === "part" ? T.blue : T.gold, display: "inline-block" }} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{({ part: `Leads particulares · ${ult.label}`, corp: `Leads corporativos · ${ult.label}`, inv: "Inversión (por mes)", costo: "Costo por lead (por mes)" })[graf]}</span></div>
+                <div className="flex items-center gap-2"><span style={{ width: 9, height: 9, borderRadius: 9, background: graf === "inv" ? T.teal : graf === "part" ? T.blue : T.gold, display: "inline-block" }} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{({ part: "Leads particulares", corp: "Leads corporativos", inv: "Inversión", costo: "Costo por lead" })[graf]}</span></div>
                 <div style={{ minWidth: 200 }}><Select value={graf} onChange={setGraf} options={[["part", "Leads particulares"], ["corp", "Leads corporativos"], ["inv", "Inversión"], ["costo", "Costo por lead"]]} /></div>
               </div>
               <div className="mt-3" style={{ width: "100%", height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  {graf === "part" || graf === "corp" ? (
-                    <PieChart>
-                      <Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => <span style={{ color: T.ink }}>{v}</span>} />
-                      <Pie data={desglose} dataKey="cantidad" nameKey="label" innerRadius={62} outerRadius={100} paddingAngle={3} stroke={T.card}
-                        label={({ cx, cy, midAngle, outerRadius, name, value }) => {
-                          const RAD = Math.PI / 180;
-                          const r = outerRadius + 16;
-                          const x = cx + r * Math.cos(-midAngle * RAD);
-                          const y = cy + r * Math.sin(-midAngle * RAD);
-                          return <text x={x} y={y} fill={T.ink} fontSize={12.5} fontWeight={600} textAnchor={x > cx ? "start" : "end"} dominantBaseline="central">{`${name}: ${nf.format(value)}`}</text>;
-                        }}>
-                        {desglose.map((_, i) => <Cell key={i} fill={[T.blue, T.teal, T.gold, T.green, "#7c3aed", "#db2777"][i % 6]} />)}
-                      </Pie>
-                    </PieChart>
+                  {graf === "part" ? (
+                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Line type="monotone" dataKey="part" name="Particulares" stroke={T.blue} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
+                  ) : graf === "corp" ? (
+                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={40} /><Tooltip contentStyle={tip} formatter={(v) => nf.format(v)} /><Line type="monotone" dataKey="corp" name="Corporativos" stroke={T.gold} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
                   ) : graf === "inv" ? (
-                    <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1e6)}M`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Line type="monotone" dataKey="inv" name="Inversión" stroke={T.teal} strokeWidth={2.5} dot={{ r: 3 }} /></LineChart>
+                    <BarChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1e6)}M`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Bar dataKey="inv" name="Inversión" fill={T.teal} radius={[4, 4, 0, 0]} /></BarChart>
                   ) : (
                     <LineChart data={data}><CartesianGrid stroke={T.line} vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={{ stroke: T.line }} /><YAxis tick={{ fontSize: 11, fill: T.muted }} tickLine={false} axisLine={false} width={56} tickFormatter={(v) => `${Math.round(v / 1000)}k`} /><Tooltip contentStyle={tip} formatter={(v) => cf.format(v)} /><Legend wrapperStyle={{ fontSize: 11 }} /><Line type="monotone" dataKey="costo" name="Total" stroke={T.ink} strokeWidth={2.5} dot={{ r: 2 }} /><Line type="monotone" dataKey="costoPart" name="Particular" stroke={T.blue} strokeWidth={2} dot={{ r: 2 }} /><Line type="monotone" dataKey="costoCorp" name="Corporativo" stroke={T.gold} strokeWidth={2} dot={{ r: 2 }} /></LineChart>
                   )}
@@ -915,57 +848,35 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
                 <thead>
                   <tr style={{ color: T.muted, textAlign: "right" }}>
                     <th className="py-2 text-left" style={{ fontWeight: 600 }}>Mes</th>
-                    {MEDIOS.filter((c) => c.key !== "emailsDerivar").map((c) => <th key={c.key} className="py-2" style={{ fontWeight: 600, color: colorDe(c.key) }}>{c.label}</th>)}
-                    <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Leads corporativos</th>
-                    <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Leads particulares</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Info</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Mail corpo</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Waalaxy/FML</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Tablet part.</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Tablet corpo</th>
+                    <th className="py-2" style={{ fontWeight: 700, color: T.gold }}>Corporativos</th>
+                    <th className="py-2" style={{ fontWeight: 700, color: T.blue }}>Particulares</th>
                     <th className="py-2" style={{ fontWeight: 700 }}>Total</th>
+                    <th className="py-2" style={{ fontWeight: 600 }}>Interac. CRM</th>
                     <th className="py-2" style={{ fontWeight: 600 }}>Inversión</th>
-                    <th className="py-2" style={{ fontWeight: 700 }}>Costo por lead</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Costo por lead particular</th>
-                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Costo por lead corpo</th>
+                    <th className="py-2" style={{ fontWeight: 700 }}>Costo total</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.blue }}>Costo part.</th>
+                    <th className="py-2" style={{ fontWeight: 600, color: T.gold }}>Costo corpo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.map((d) => (
                     <tr key={d.key} style={{ borderTop: `1px solid ${T.line}`, textAlign: "right" }}>
                       <td className="py-2 text-left" style={{ fontWeight: 600 }}>{d.label}</td>
-                      {MEDIOS.filter((c) => c.key !== "emailsDerivar").map((c) => <td key={c.key} className="py-2 tabular-nums">{nf.format(d[c.key])}</td>)}
-                      {[["leads_corp", "corp", "corpReal", T.gold], ["leads_part", "part", "partReal", T.blue]].map(([campo, val, real, color]) => {
-                        const k = `${d.key}::${campo}`;
-                        return (
-                          <td key={campo} className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                            {d.historico ? <span className="tabular-nums" style={{ color, fontWeight: 700 }}>{nf.format(d[val])}</span> : (
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                <input
-                                  type="number"
-                                  value={promoEdit[k] ?? String(d[val])}
-                                  onChange={(e) => setPromoEdit({ ...promoEdit, [k]: e.target.value })}
-                                  style={{ width: 58, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color, fontWeight: 700, textAlign: "right", outline: "none" }}
-                                />
-                                {promoEdit[k] != null && promoEdit[k] !== String(d[val]) && (
-                                  <button onClick={() => guardarAjuste(d.key, campo, d[real])} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
-                                )}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
+                      <td className="py-2 tabular-nums">{nf.format(d.info)}</td>
+                      <td className="py-2 tabular-nums">{nf.format(d.mail_corpo)}</td>
+                      <td className="py-2 tabular-nums">{nf.format(d.waalaxy_fml)}</td>
+                      <td className="py-2 tabular-nums">{nf.format(d.tablet_part)}</td>
+                      <td className="py-2 tabular-nums">{nf.format(d.tablet_corpo)}</td>
+                      <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.gold }}>{nf.format(d.corp)}</td>
+                      <td className="py-2 tabular-nums" style={{ fontWeight: 700, color: T.blue }}>{nf.format(d.part)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{nf.format(d.total)}</td>
-                      <td className="py-2" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
-                        {d.historico ? <span className="tabular-nums">{cf.format(d.inv)}</span> : (
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                            <input
-                              type="number"
-                              value={promoEdit[`${d.key}::inversion`] ?? String(d.inv)}
-                              onChange={(e) => setPromoEdit({ ...promoEdit, [`${d.key}::inversion`]: e.target.value })}
-                              style={{ width: 110, border: `1px solid ${T.line}`, borderRadius: 6, fontSize: 12, padding: "3px 5px", fontFamily: FONT, background: T.input, color: T.ink, textAlign: "right", outline: "none" }}
-                            />
-                            {promoEdit[`${d.key}::inversion`] != null && promoEdit[`${d.key}::inversion`] !== String(d.inv) && (
-                              <button onClick={() => guardarInv(d.key)} title="Confirmar" style={{ border: "none", background: "transparent", color: T.green, cursor: "pointer", fontSize: 14, fontWeight: 700, padding: 0 }}>✓</button>
-                            )}
-                          </span>
-                        )}
-                      </td>
+                      <td className="py-2 tabular-nums">{nf.format(d.crm)}</td>
+                      <td className="py-2 tabular-nums">{cf.format(d.inv)}</td>
                       <td className="py-2 tabular-nums" style={{ fontWeight: 700 }}>{cf.format(d.costo)}</td>
                       <td className="py-2 tabular-nums" style={{ color: T.blue, fontWeight: 600 }}>{cf.format(d.costoPart)}</td>
                       <td className="py-2 tabular-nums" style={{ color: T.gold, fontWeight: 600 }}>{cf.format(d.costoCorp)}</td>
@@ -985,7 +896,7 @@ function PanelJefe({ sesion, datos, recargar, mutar, salir, tema, cambiarTema })
             </div>
             <Card style={{ padding: 18 }}>
               <div className="flex flex-wrap items-end gap-3">
-                <div style={{ flex: "1 1 150px" }}><Field label="Mes"><Select value={fMes} onChange={setFMes} options={[["todos", "Todos"], ...mesesFiltro.map((k) => [k, labelDe(k)])]} /></Field></div>
+                <div style={{ flex: "1 1 150px" }}><Field label="Mes"><Select value={fMes} onChange={setFMes} options={[["todos", "Todos"], ...MESES.map((m) => [m.key, m.label])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Medio"><Select value={fMed} onChange={setFMed} options={[["todos", "Todos"], ...MEDIOS.map((c) => [c.key, c.label])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Vendedor"><Select value={fVend} onChange={setFVend} options={[["todos", "Todos"], ...datos.vendedores.map((v) => [v.id, v.nombre])]} /></Field></div>
                 <div style={{ flex: "1 1 180px" }}><Field label="Asesor"><Select value={fAsesor} onChange={setFAsesor} options={[["todos", "Todos"], ...asesores.map((a) => [a, a])]} /></Field></div>
