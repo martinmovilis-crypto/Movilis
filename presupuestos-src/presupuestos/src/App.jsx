@@ -276,7 +276,6 @@ export default function App() {
 /* ------------------------------------------------------------------ */
 function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDescarga }) {
   const [cliente, setCliente] = useState("");
-  const [fecha] = useState(hoy());
   const [vigencia, setVigencia] = useState(10);
   const [conIva, setConIva] = useState(false);
   const [seleccion, setSeleccion] = useState([]); // copias editables
@@ -345,7 +344,9 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
       vehiculos,
       vigencia: Number(vigencia) || 10,
       conIva,
-      fecha,
+      // La fecha se calcula en el momento de generar, no al abrir la app,
+      // así siempre queda la del día actual aunque la página quede abierta.
+      fecha: hoy(),
       logoEmpresa,
     });
     setGenerando(false);
@@ -361,7 +362,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
         espacio: ESPACIO,
         vigencia_dias: Number(vigencia) || 10,
         incluye_iva: conIva,
-        fecha_texto: fecha,
+        fecha_texto: docProps?.fecha || hoy(),
         items: seleccion.map((v) => ({
           id: v.id,
           nombre: v.nombre,
@@ -428,7 +429,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
               <span>Aplicar IVA (21%)</span>
             </label>
           </div>
-          <div className="muted small">Fecha: {fecha}</div>
+          <div className="muted small">Fecha: {hoy()}</div>
         </div>
 
         <div className="card">
