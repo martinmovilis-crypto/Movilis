@@ -9,6 +9,8 @@ import {
   guardarLogo,
   EMPRESA_DEFAULT,
   CATEGORIAS,
+  MARCAS,
+  marcaDe,
   PERIODOS,
   FRECUENCIAS,
   PLAZOS,
@@ -278,6 +280,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
   const [cliente, setCliente] = useState("");
   const [vigencia, setVigencia] = useState(10);
   const [conIva, setConIva] = useState(false);
+  const [marcaSel, setMarcaSel] = useState(""); // filtro de marca en la galería
   const [seleccion, setSeleccion] = useState([]); // copias editables
   const [docProps, setDocProps] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -286,6 +289,27 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
   const [subiendoLogo, setSubiendoLogo] = useState(false);
 
   const idsSel = seleccion.map((v) => v.id);
+
+  // Marca de un vehículo (la cargada o, si no, derivada del nombre).
+  const marcaVeh = (v) => v.marca || marcaDe(v.nombre) || "Otros";
+
+  // Lista de marcas presentes en el catálogo, con su cantidad.
+  const marcas = useMemo(() => {
+    const m = new Map();
+    catalogo.forEach((v) => {
+      const k = marcaVeh(v);
+      m.set(k, (m.get(k) || 0) + 1);
+    });
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+  }, [catalogo]);
+
+  // Vehículos a mostrar: filtrados por marca y ordenados por precio (menor a mayor).
+  const visibles = useMemo(() => {
+    const arr = marcaSel ? catalogo.filter((v) => marcaVeh(v) === marcaSel) : catalogo;
+    return arr
+      .slice()
+      .sort((a, b) => (Number(a.tarifa_mensual) || 0) - (Number(b.tarifa_mensual) || 0));
+  }, [catalogo, marcaSel]);
 
   async function subirLogo(file) {
     if (!file) return;
@@ -434,8 +458,18 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
 
         <div className="card">
           <h3>Elegí los vehículos</h3>
+          <label className="fld">
+            <span>Marca</span>
+            <select value={marcaSel} onChange={(e) => setMarcaSel(e.target.value)}>
+              <option value="">Todas las marcas ({catalogo.length})</option>
+              {marcas.map(([m, n]) => (
+                <option key={m} value={m}>{m} ({n})</option>
+              ))}
+            </select>
+          </label>
+          <p className="muted small">Ordenados por precio, de menor a mayor.</p>
           <div className="galeria">
-            {catalogo.map((v) => {
+            {visibles.map((v) => {
               const activo = idsSel.includes(v.id);
               const foto = fotoDe(v);
               return (
@@ -451,7 +485,11 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
               );
             })}
           </div>
-          {catalogo.length === 0 ? <p className="muted">No hay vehículos. Cargalos en “Catálogo y fotos”.</p> : null}
+          {catalogo.length === 0 ? (
+            <p className="muted">No hay vehículos. Cargalos en “Catálogo y fotos”.</p>
+          ) : visibles.length === 0 ? (
+            <p className="muted">No hay vehículos de esa marca.</p>
+          ) : null}
         </div>
 
         {seleccion.length > 0 && (
@@ -876,6 +914,7 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
     setMsg("");
     const payload = {
       nombre: v.nombre.trim(),
+      marca: (v.marca || "").trim() || marcaDe(v.nombre) || null,
       categoria: (v.categoria || "").trim() || null,
       cantidad_disponible:
         v.cantidad_disponible === "" || v.cantidad_disponible == null
@@ -937,6 +976,15 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
 
         <div className="veh-editor-campos">
           <div className="row">
+            <label className="fld sm-fld">
+              <span>Marca</span>
+              <input
+                list="marcas-list"
+                value={v.marca || ""}
+                onChange={(e) => set("marca", e.target.value)}
+                placeholder="Ej: Fiat"
+              />
+            </label>
             <label className="fld grow">
               <span>Nombre del vehículo</span>
               <input value={v.nombre} onChange={(e) => set("nombre", e.target.value)} placeholder="Ej: Renault Kwid" />
@@ -967,6 +1015,11 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
           <datalist id="categorias-list">
             {CATEGORIAS.map((c) => (
               <option key={c} value={c} />
+            ))}
+          </datalist>
+          <datalist id="marcas-list">
+            {MARCAS.map((m) => (
+              <option key={m} value={m} />
             ))}
           </datalist>
 

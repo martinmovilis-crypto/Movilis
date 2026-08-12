@@ -126,6 +126,29 @@ export const CATEGORIAS = [
   "C", "H", "H1", "K", "K1", "Z", "N1", "M", "S", "L", "J", "U1", "U2", "U3", "U4",
 ];
 
+// Marcas más comunes (para el selector al cargar/cotizar). Editable: podés
+// escribir otra si no está en la lista.
+export const MARCAS = [
+  "Chery", "Chevrolet", "Citroen", "DFSK", "Fiat", "Ford", "Honda", "Hyundai",
+  "Jeep", "Kia", "Nissan", "Peugeot", "Renault", "Toyota", "Volkswagen",
+];
+
+// Deriva la marca desde el nombre cuando el vehículo no la tiene cargada.
+// Reconoce las marcas conocidas y, si no, toma la primera palabra.
+export function marcaDe(nombre) {
+  const s = (nombre || "").trim();
+  if (!s) return "";
+  const norm = (x) =>
+    x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const low = norm(s);
+  for (const m of MARCAS) {
+    const ml = norm(m);
+    if (low === ml || low.startsWith(ml + " ")) return m;
+  }
+  const first = s.split(/\s+/)[0];
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 // Período de la tarifa (elegible al cotizar).
 export const PERIODOS = ["Mensual", "Trimestral", "Cuatrimestral", "Semestral", "Anual"];
 
@@ -168,6 +191,7 @@ export function franquiciaTexto(val, factor = 1) {
 export function vehiculoNuevo() {
   return {
     nombre: "",
+    marca: "",
     categoria: "",
     cantidad_disponible: "",
     orden: 99,
