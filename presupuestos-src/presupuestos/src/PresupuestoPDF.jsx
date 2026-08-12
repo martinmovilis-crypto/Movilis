@@ -345,7 +345,7 @@ export default function PresupuestoPDF({ empresa, cliente, vehiculos, vigencia, 
 
       {/* Una página por vehículo */}
       {vehiculos.map((v) => (
-        <PaginaVehiculo key={v.id || v.nombre} v={v} empresa={empresa} cliente={cliente} vigencia={vigencia} conIva={conIva} />
+        <PaginaVehiculo key={v.uid || v.id || v.nombre} v={v} empresa={empresa} cliente={cliente} vigencia={vigencia} conIva={conIva} />
       ))}
     </Document>
   );

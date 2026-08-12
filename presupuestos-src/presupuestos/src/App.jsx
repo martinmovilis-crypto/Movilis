@@ -288,7 +288,11 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
   const [msg, setMsg] = useState("");
   const [subiendoLogo, setSubiendoLogo] = useState(false);
 
-  const idsSel = seleccion.map((v) => v.id);
+  // Cuántas veces está agregado cada modelo (para el contador de la galería).
+  const conteoSel = {};
+  seleccion.forEach((v) => {
+    conteoSel[v.id] = (conteoSel[v.id] || 0) + 1;
+  });
 
   // Marca de un vehículo (la cargada o, si no, derivada del nombre).
   const marcaVeh = (v) => v.marca || marcaDe(v.nombre) || "Otros";
@@ -332,18 +336,33 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
     setDocProps((d) => (d ? { ...d, logoEmpresa: null } : d));
   }
 
-  function toggle(v) {
+  // Cada ítem del presupuesto tiene un uid propio, así se puede agregar el
+  // mismo modelo varias veces con valores distintos.
+  const nuevoUid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  function agregar(v) {
     setDocProps(null);
-    if (idsSel.includes(v.id)) {
-      setSeleccion((s) => s.filter((x) => x.id !== v.id));
-    } else {
-      setSeleccion((s) => [...s, { ...v }]);
-    }
+    setSeleccion((s) => [...s, { ...v, uid: nuevoUid() }]);
   }
 
-  function editar(id, campo, valor) {
+  function duplicar(uid) {
     setDocProps(null);
-    setSeleccion((s) => s.map((v) => (v.id === id ? { ...v, [campo]: valor } : v)));
+    setSeleccion((s) => {
+      const i = s.findIndex((x) => x.uid === uid);
+      if (i < 0) return s;
+      const copia = { ...s[i], uid: nuevoUid() };
+      return [...s.slice(0, i + 1), copia, ...s.slice(i + 1)];
+    });
+  }
+
+  function quitar(uid) {
+    setDocProps(null);
+    setSeleccion((s) => s.filter((x) => x.uid !== uid));
+  }
+
+  function editar(uid, campo, valor) {
+    setDocProps(null);
+    setSeleccion((s) => s.map((v) => (v.uid === uid ? { ...v, [campo]: valor } : v)));
   }
 
   async function generar() {
@@ -470,14 +489,14 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
           <p className="muted small">Ordenados por precio, de menor a mayor.</p>
           <div className="galeria">
             {visibles.map((v) => {
-              const activo = idsSel.includes(v.id);
+              const cant = conteoSel[v.id] || 0;
               const foto = fotoDe(v);
               return (
-                <button key={v.id} className={"veh-card" + (activo ? " sel" : "")} onClick={() => toggle(v)} type="button">
+                <button key={v.id} className={"veh-card" + (cant ? " sel" : "")} onClick={() => agregar(v)} type="button" title="Tocá para agregar (podés agregarlo más de una vez)">
                   <div className="veh-foto">
                     {foto ? <img src={foto} alt={v.nombre} /> : <div className="veh-noimg">Sin foto</div>}
                     {v.categoria ? <span className="veh-cat">{v.categoria}</span> : null}
-                    {activo ? <span className="veh-check">✓</span> : null}
+                    {cant ? <span className="veh-check" title={cant + " agregado(s)"}>{cant}</span> : null}
                   </div>
                   <div className="veh-nombre">{v.nombre}</div>
                   <div className="veh-precio">{pesos(v.tarifa_mensual)}/mes</div>
@@ -510,37 +529,53 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
               .slice()
               .sort((a, b) => (a.orden || 0) - (b.orden || 0))
               .map((v) => (
-                <div key={v.id} className="item-edit">
+                <div key={v.uid} className="item-edit">
                   <div className="item-head-row">
                     <input
                       className="item-nombre"
                       value={v.nombre}
-                      onChange={(e) => editar(v.id, "nombre", e.target.value)}
+                      onChange={(e) => editar(v.uid, "nombre", e.target.value)}
                     />
                     <input
                       className="item-cat"
                       list="cat-list-pres"
                       value={v.categoria || ""}
-                      onChange={(e) => editar(v.id, "categoria", e.target.value.toUpperCase())}
+                      onChange={(e) => editar(v.uid, "categoria", e.target.value.toUpperCase())}
                       placeholder="Cat"
                       title="Categoría"
                     />
+                    <button
+                      type="button"
+                      className="btn ghost sm"
+                      onClick={() => duplicar(v.uid)}
+                      title="Agregar otra cotización de este mismo vehículo"
+                    >
+                      ⧉ Duplicar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn danger-ghost sm"
+                      onClick={() => quitar(v.uid)}
+                      title="Quitar del presupuesto"
+                    >
+                      ✕
+                    </button>
                   </div>
                   <div className="row item-specs">
                     <label className="fld sm-fld">
                       <span>Personas</span>
-                      <input type="number" value={v.personas} onChange={(e) => editar(v.id, "personas", Number(e.target.value) || 0)} />
+                      <input type="number" value={v.personas} onChange={(e) => editar(v.uid, "personas", Number(e.target.value) || 0)} />
                     </label>
                     <label className="fld">
                       <span>Transmisión</span>
-                      <select value={v.transmision} onChange={(e) => editar(v.id, "transmision", e.target.value)}>
+                      <select value={v.transmision} onChange={(e) => editar(v.uid, "transmision", e.target.value)}>
                         <option>Manual</option>
                         <option>Automática</option>
                       </select>
                     </label>
                     <label className="fld">
                       <span>Tracción</span>
-                      <input value={v.traccion || ""} onChange={(e) => editar(v.id, "traccion", e.target.value)} placeholder="4x4 (opcional)" />
+                      <input value={v.traccion || ""} onChange={(e) => editar(v.uid, "traccion", e.target.value)} placeholder="4x4 (opcional)" />
                     </label>
                   </div>
                   <div className="chips-check">
@@ -551,7 +586,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                       ["airbag", "Airbag"],
                     ].map(([k, lbl]) => (
                       <label key={k} className={"chip-check" + (v[k] ? " on" : "")}>
-                        <input type="checkbox" checked={!!v[k]} onChange={(e) => editar(v.id, k, e.target.checked)} />
+                        <input type="checkbox" checked={!!v[k]} onChange={(e) => editar(v.uid, k, e.target.checked)} />
                         {lbl}
                       </label>
                     ))}
@@ -559,7 +594,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                   <div className="row item-specs">
                     <label className="fld">
                       <span>Período de la tarifa</span>
-                      <select value={v.periodo || "Mensual"} onChange={(e) => editar(v.id, "periodo", e.target.value)}>
+                      <select value={v.periodo || "Mensual"} onChange={(e) => editar(v.uid, "periodo", e.target.value)}>
                         {PERIODOS.map((pd) => (
                           <option key={pd}>{pd}</option>
                         ))}
@@ -571,7 +606,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                         type="number"
                         list="plazos-list"
                         value={v.plazo_meses ?? ""}
-                        onChange={(e) => editar(v.id, "plazo_meses", e.target.value === "" ? "" : Number(e.target.value))}
+                        onChange={(e) => editar(v.uid, "plazo_meses", e.target.value === "" ? "" : Number(e.target.value))}
                         placeholder="Elegí…"
                       />
                     </label>
@@ -580,7 +615,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                       <input
                         type="number"
                         value={v.cantidad_disponible ?? ""}
-                        onChange={(e) => editar(v.id, "cantidad_disponible", e.target.value === "" ? "" : Number(e.target.value))}
+                        onChange={(e) => editar(v.uid, "cantidad_disponible", e.target.value === "" ? "" : Number(e.target.value))}
                         placeholder="—"
                       />
                     </label>
@@ -590,7 +625,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                       <span>Actualización de tarifa (INDEC)</span>
                       <select
                         value={v.frecuencia_actualizacion || "Trimestral"}
-                        onChange={(e) => editar(v.id, "frecuencia_actualizacion", e.target.value)}
+                        onChange={(e) => editar(v.uid, "frecuencia_actualizacion", e.target.value)}
                       >
                         {FRECUENCIAS.map((f) => (
                           <option key={f}>{f}</option>
@@ -603,7 +638,7 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                       <span>Km mensuales</span>
                       <select
                         value={String(v.km_mensuales ?? "5000")}
-                        onChange={(e) => editar(v.id, "km_mensuales", e.target.value)}
+                        onChange={(e) => editar(v.uid, "km_mensuales", e.target.value)}
                       >
                         {!KM_OPCIONES.includes(String(v.km_mensuales ?? "5000")) ? (
                           <option value={String(v.km_mensuales)}>{kmLabel(v.km_mensuales)}</option>
@@ -613,16 +648,16 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                         ))}
                       </select>
                     </label>
-                    <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.id, "tarifa_mensual", n)} money />
-                    <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => editar(v.id, "franquicia_dano", x)} />
-                    <FranqFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(x) => editar(v.id, "franquicia_vuelco", x)} />
+                    <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.uid, "tarifa_mensual", n)} money />
+                    <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => editar(v.uid, "franquicia_dano", x)} />
+                    <FranqFld label="Franquicia vuelco" val={v.franquicia_vuelco} on={(x) => editar(v.uid, "franquicia_vuelco", x)} />
                   </div>
                   <label className="fld">
                     <span>Notas / observaciones (opcional)</span>
                     <textarea
                       className="notas-area"
                       value={v.notas || ""}
-                      onChange={(e) => editar(v.id, "notas", e.target.value)}
+                      onChange={(e) => editar(v.uid, "notas", e.target.value)}
                       placeholder="Ej: incluye porta-equipaje, GPS, rotulado de la unidad…"
                       rows={2}
                     />
