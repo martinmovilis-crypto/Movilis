@@ -14,8 +14,6 @@ import {
   PERIODOS,
   FRECUENCIAS,
   PLAZOS,
-  KM_OPCIONES,
-  kmLabel,
   fotoDe,
   slugify,
   pesos,
@@ -525,6 +523,11 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                 <option key={p} value={p}>{p} meses</option>
               ))}
             </datalist>
+            <datalist id="km-list">
+              <option value="5000">5.000 km</option>
+              <option value="3000">3.000 km</option>
+              <option value="KM LIBRE" />
+            </datalist>
             {seleccion
               .slice()
               .sort((a, b) => (a.orden || 0) - (b.orden || 0))
@@ -636,17 +639,12 @@ function TabPresupuesto({ empresa, catalogo, logoEmpresa, setLogoEmpresa, onDesc
                   <div className="item-grid">
                     <label className="fld">
                       <span>Km mensuales</span>
-                      <select
-                        value={String(v.km_mensuales ?? "5000")}
+                      <input
+                        list="km-list"
+                        value={v.km_mensuales ?? ""}
                         onChange={(e) => editar(v.uid, "km_mensuales", e.target.value)}
-                      >
-                        {!KM_OPCIONES.includes(String(v.km_mensuales ?? "5000")) ? (
-                          <option value={String(v.km_mensuales)}>{kmLabel(v.km_mensuales)}</option>
-                        ) : null}
-                        {KM_OPCIONES.map((k) => (
-                          <option key={k} value={k}>{kmLabel(k)}</option>
-                        ))}
-                      </select>
+                        placeholder="Ej: 5000, 2500, KM LIBRE…"
+                      />
                     </label>
                     <NumFld label={"Tarifa " + (v.periodo || "Mensual").toLowerCase()} val={v.tarifa_mensual} on={(n) => editar(v.uid, "tarifa_mensual", n)} money />
                     <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => editar(v.uid, "franquicia_dano", x)} />
@@ -1057,6 +1055,11 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
               <option key={m} value={m} />
             ))}
           </datalist>
+          <datalist id="km-list">
+            <option value="5000">5.000 km</option>
+            <option value="3000">3.000 km</option>
+            <option value="KM LIBRE" />
+          </datalist>
 
           <div className="row">
             <label className="fld sm-fld">
@@ -1093,17 +1096,12 @@ function VehiculoEditor({ inicial, onGuardado, onCancelar, esNuevo }) {
           <div className="item-grid">
             <label className="fld">
               <span>Km mensuales</span>
-              <select
-                value={String(v.km_mensuales ?? "5000")}
+              <input
+                list="km-list"
+                value={v.km_mensuales ?? ""}
                 onChange={(e) => set("km_mensuales", e.target.value)}
-              >
-                {!KM_OPCIONES.includes(String(v.km_mensuales ?? "5000")) ? (
-                  <option value={String(v.km_mensuales)}>{kmLabel(v.km_mensuales)}</option>
-                ) : null}
-                {KM_OPCIONES.map((k) => (
-                  <option key={k} value={k}>{kmLabel(k)}</option>
-                ))}
-              </select>
+                placeholder="Ej: 5000, 2500, KM LIBRE…"
+              />
             </label>
             <NumFld label="Tarifa base" val={v.tarifa_mensual} on={(n) => set("tarifa_mensual", n)} money />
             <FranqFld label="Franquicia Daño" val={v.franquicia_dano} on={(x) => set("franquicia_dano", x)} />
